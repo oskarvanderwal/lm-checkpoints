@@ -110,7 +110,10 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         # Necessary here?
         config.output_scores = True
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name, device=self.device,)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            device=self.device,
+        )
 
         model = AutoModelForMaskedLM.from_pretrained(
             model_name,

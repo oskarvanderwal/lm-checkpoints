@@ -46,12 +46,9 @@ def chunk(L, n):
 class AbstractCheckpoints(ABC):
     """Abstract class for iterating over model checkpoints"""
 
-    def __init__(
-        self,
-        device="cpu"
-    ):
+    def __init__(self, device="cpu"):
         self.low_cpu_mem_usage = True if device == "cpu" else False
-        
+
         self._device = device
         if device == "cpu":
             self.device = torch.device("cpu")

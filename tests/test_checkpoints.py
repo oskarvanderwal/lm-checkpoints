@@ -2,15 +2,18 @@ from lm_checkpoints import PythiaCheckpoints, MultiBERTCheckpoints
 from lm_checkpoints.testing import multi_device
 import torch
 
+
 @multi_device
 def test__pythia_multi_device(device: str):
     ckpt = PythiaCheckpoints(step=[143000], seed=[0], device=device)[0]
     assert ckpt.model.device.type == device
 
+
 @multi_device
 def test__multibert_multi_device(device: str):
     ckpt = MultiBERTCheckpoints(step=[2000], seed=[0], device=device)[0]
     assert ckpt.model.device.type == device
+
 
 def test__pythia_sizes():
     pythia_ckpts = PythiaCheckpoints(step=[143000], seed=[0])

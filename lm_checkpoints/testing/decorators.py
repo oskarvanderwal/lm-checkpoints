@@ -7,6 +7,7 @@ if torch.cuda.is_available():
 if torch.backends.mps.is_available():
     _available_devices.append("mps")
 
+
 def multi_device(test_method):
     """
     Adapted from AllenNLP.
