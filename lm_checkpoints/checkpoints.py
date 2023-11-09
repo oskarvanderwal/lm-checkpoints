@@ -48,10 +48,10 @@ class AbstractCheckpoints(ABC):
 
     def __init__(
         self,
-        cache_dir=None,
-        device="cpu",
-        **kwargs,
+        device="cpu"
     ):
+        self.low_cpu_mem_usage = True if device == "cpu" else False
+        
         self._device = device
         if device == "cpu":
             self.device = torch.device("cpu")
@@ -113,6 +113,12 @@ class AbstractCheckpoints(ABC):
     @abstractmethod
     def __len__(self):
         pass
+
+    def __getitem__(self, index):
+        cfg = self.checkpoints[index]
+        ckpt = self.get_checkpoint(**cfg)
+        print(ckpt)
+        return ckpt
 
     def __iter__(self):
         for cfg in self.checkpoints:

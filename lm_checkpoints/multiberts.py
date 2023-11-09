@@ -110,14 +110,16 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         # Necessary here?
         config.output_scores = True
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, device=self.device,)
 
         model = AutoModelForMaskedLM.from_pretrained(
             model_name,
             config=config,
-            low_cpu_mem_usage=True,  # https://huggingface.co/docs/transformers/main_classes/model#large-model-loading
+            low_cpu_mem_usage=self.low_cpu_mem_usage,  # https://huggingface.co/docs/transformers/main_classes/model#large-model-loading
         )
         model.eval()
+        model = model.to(self.device)
+
         return Checkpoint(
             model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step
         )

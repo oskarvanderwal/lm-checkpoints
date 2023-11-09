@@ -97,12 +97,14 @@ class PythiaCheckpoints(AbstractCheckpoints):
             model_name,
             revision=f"step{step}",
         )
+
         model = GPTNeoXForCausalLM.from_pretrained(
             model_name,
             revision=f"step{step}",
-            low_cpu_mem_usage=True,
+            low_cpu_mem_usage=self.low_cpu_mem_usage,
         )
         model.eval()
+        model = model.to(self.device)
 
         return Checkpoint(
             model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step
