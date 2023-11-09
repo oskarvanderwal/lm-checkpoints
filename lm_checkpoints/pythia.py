@@ -2,9 +2,18 @@ from lm_checkpoints import AbstractCheckpoints, Checkpoint
 from itertools import product
 from transformers import AutoTokenizer, GPTNeoXForCausalLM
 
+
 class PythiaCheckpoints(AbstractCheckpoints):
     """Class for iterating over Pythia checkpoints"""
-    def __init__(self, size: int = 70, step: list[int] = None, seed: list[int] = None, deduped: bool = False, **kwargs) -> None:
+
+    def __init__(
+        self,
+        size: int = 70,
+        step: list[int] = None,
+        seed: list[int] = None,
+        deduped: bool = False,
+        **kwargs,
+    ) -> None:
         """Initialize the PythiaCheckpoints.
 
         Args:
@@ -27,7 +36,9 @@ class PythiaCheckpoints(AbstractCheckpoints):
         else:
             self.seeds = self._seeds
 
-        self._steps = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(range(1000,144000,1000))
+        self._steps = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(
+            range(1000, 144000, 1000)
+        )
         if step:
             assert set(step).issubset(set(self._steps))
             self.steps = step
@@ -40,7 +51,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
 
     @staticmethod
     def last_step() -> int:
-        """Last step of training."""        
+        """Last step of training."""
         return 143000
 
     @property
@@ -49,7 +60,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
 
         Returns:
             dict: Configuration of this checkpoints object.
-        """        
+        """
         return {"size": self.size, "deduped": self.deduped}
 
     def get_model_name(self, seed: int) -> str:
@@ -67,13 +78,15 @@ class PythiaCheckpoints(AbstractCheckpoints):
             return f"EleutherAI/pythia-{self.size}m-seed{seed}"
 
     @property
-    def checkpoints(self) -> list[dict[str, int]]:          
+    def checkpoints(self) -> list[dict[str, int]]:
         """Returns all step and seed combinations that make up the checkpoints.
 
         Returns:
             list[dict[str, int]]: List of dicts (seed, step) describing each checkpoint.
         """
-        return list({"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps))
+        return list(
+            {"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps)
+        )
 
     def __len__(self):
         return len(self.seeds) * len(self.steps)
@@ -83,12 +96,14 @@ class PythiaCheckpoints(AbstractCheckpoints):
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             revision=f"step{step}",
-            )
+        )
         model = GPTNeoXForCausalLM.from_pretrained(
-                    model_name,
-                    revision=f"step{step}",
-                    low_cpu_mem_usage=True,
-                    )
+            model_name,
+            revision=f"step{step}",
+            low_cpu_mem_usage=True,
+        )
         model.eval()
 
-        return Checkpoint(model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step)
+        return Checkpoint(
+            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step
+        )
