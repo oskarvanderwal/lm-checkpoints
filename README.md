@@ -1,6 +1,8 @@
 # lm-checkpoints
 Simple library for dealing with language model checkpoints.
 
+Install using `pip install lm-checkpoints`.
+
 ## Example
 Say you want to compute some metrics for all model checkpoints of Pythia 160m, but only seed 0.
 
