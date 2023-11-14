@@ -3,9 +3,10 @@ from itertools import product
 import torch
 from pathlib import Path
 import numpy as np
+from typing import List, Dict, Union
 
 
-def records_to_list(list_of_dicts: list[dict[str, int]] | dict[str, int]):
+def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
     """Transform a list of dictionaries to a dictionary of lists.
     If list_of_dicts is a dictionary, it will simply make a list of each values.
     From: https://stackoverflow.com/questions/5558418/list-of-dicts-to-from-dict-of-lists
@@ -46,7 +47,7 @@ def chunk(L, n):
 class AbstractCheckpoints(ABC):
     """Abstract class for iterating over model checkpoints"""
 
-    def __init__(self, device="cpu"):
+    def __init__(self, device: str = "cpu"):
         self.low_cpu_mem_usage = True if device == "cpu" else False
 
         self._device = device

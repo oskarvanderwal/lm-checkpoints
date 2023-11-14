@@ -1,6 +1,7 @@
 from lm_checkpoints import AbstractCheckpoints, Checkpoint
 from itertools import product
 from transformers import AutoTokenizer, GPTNeoXForCausalLM
+from typing import List, Dict
 
 
 class PythiaCheckpoints(AbstractCheckpoints):
@@ -9,8 +10,8 @@ class PythiaCheckpoints(AbstractCheckpoints):
     def __init__(
         self,
         size: int = 70,
-        step: list[int] = None,
-        seed: list[int] = None,
+        step: List[int] = None,
+        seed: List[int] = None,
         deduped: bool = False,
         **kwargs,
     ) -> None:
@@ -78,7 +79,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
             return f"EleutherAI/pythia-{self.size}m-seed{seed}"
 
     @property
-    def checkpoints(self) -> list[dict[str, int]]:
+    def checkpoints(self) -> List[Dict[str, int]]:
         """Returns all step and seed combinations that make up the checkpoints.
 
         Returns:

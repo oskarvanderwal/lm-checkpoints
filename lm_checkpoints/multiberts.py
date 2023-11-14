@@ -1,6 +1,7 @@
 from lm_checkpoints import AbstractCheckpoints, Checkpoint
 from transformers import AutoConfig, AutoTokenizer, AutoModelForMaskedLM
 from itertools import product
+from typing import List, Dict
 
 
 class MultiBERTCheckpoints(AbstractCheckpoints):
@@ -90,7 +91,7 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         return f"google/multiberts-seed_{seed}-step_{step}k"
 
     @property
-    def checkpoints(self) -> list[dict[str, int]]:
+    def checkpoints(self) -> List[Dict[str, int]]:
         """Returns all step and seed combinations that make up the checkpoints.
 
         Returns:
