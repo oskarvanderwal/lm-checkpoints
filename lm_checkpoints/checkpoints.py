@@ -115,13 +115,15 @@ class AbstractCheckpoints(ABC):
     def __getitem__(self, index):
         cfg = self.checkpoints[index]
         ckpt = self.get_checkpoint(**cfg)
-        print(ckpt)
         return ckpt
 
     def __iter__(self):
         for cfg in self.checkpoints:
-            ckpt = self.get_checkpoint(**cfg)
-            yield ckpt
+            try:
+                ckpt = self.get_checkpoint(**cfg)
+                yield ckpt
+            except:
+                continue
 
 
 class Checkpoint:
