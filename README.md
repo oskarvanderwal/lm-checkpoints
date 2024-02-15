@@ -28,3 +28,11 @@ from lm_checkpoints import MultiBERTCheckpoints
 for ckpt in MultiBERTCheckpoints.final_checkpoints():
     # Do something with ckpt.model or ckpt.tokenizer
 ```
+
+In case you don't want the checkpoints to fill up your space, use `clean_cache=True` to delete older checkpoints:
+```
+from lm_checkpoints import PythiaCheckpoints
+
+for ckpt in PythiaCheckpoints(size=14,clean_cache=True):
+    # Do something with ckpt.model or ckpt.tokenizer
+```

@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 import numpy as np
 from typing import List, Dict, Union
-
+from huggingface_hub import scan_cache_dir
 
 def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
     """Transform a list of dictionaries to a dictionary of lists.
@@ -20,7 +20,6 @@ def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
     if not isinstance(list_of_dicts, list):
         list_of_dicts = [list_of_dicts]
     return {k: [dic[k] for dic in list_of_dicts] for k in list_of_dicts[0]}
-
 
 def chunk(L, n):
     """
@@ -47,7 +46,7 @@ def chunk(L, n):
 class AbstractCheckpoints(ABC):
     """Abstract class for iterating over model checkpoints"""
 
-    def __init__(self, device: str = "cpu"):
+    def __init__(self, device: str = "cpu", clean_cache: bool = False):
         self.low_cpu_mem_usage = True if device == "cpu" else False
 
         self._device = device
@@ -59,6 +58,16 @@ class AbstractCheckpoints(ABC):
             self.device = torch.device(
                 "mps" if torch.backends.mps.is_available() else "cpu"
             )
+
+        self.clean_cache = clean_cache
+
+    @staticmethod
+    def get_revision_hash(name: str, revision: str) -> str:
+        """Returns the commit hash for the model and revision (e.g., step) combination"""
+        for x in iter(scan_cache_dir().repos):
+            if x.repo_id == name:
+                return x.refs[revision].commit_hash
+        return None
 
     def split(self, n):
         """Convenience function for splitting checkpoints for e.g. parallel computing.
@@ -118,9 +127,20 @@ class AbstractCheckpoints(ABC):
         return ckpt
 
     def __iter__(self):
+        delete_hash = []
         for cfg in self.checkpoints:
+            if self.clean_cache and len(delete_hash) > 0:
+                cache_info = scan_cache_dir()
+                delete_strategy = cache_info.delete_revisions(commit_hash)
+                delete_strategy.execute()
             try:
                 ckpt = self.get_checkpoint(**cfg)
+
+                # Add commit_hash to be deleted if self.clean_cache strategy
+                if "commit_hash" in ckpt.config:
+                    commit_hash = ckpt.config["commit_hash"]
+                    if commit_hash:
+                        delete_hash.append(commit_hash)
                 yield ckpt
             except:
                 continue

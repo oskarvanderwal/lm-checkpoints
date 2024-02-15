@@ -124,6 +124,8 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         model.eval()
         model = model.to(self.device)
 
+        commit_hash = self.get_revision_hash(model_name, f"main")
+
         return Checkpoint(
-            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step
+            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash
         )
