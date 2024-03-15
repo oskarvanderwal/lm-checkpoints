@@ -37,7 +37,7 @@ for ckpt in MultiBERTCheckpoints.final_checkpoints():
     print(ckpt.config)
 ```
 
-### Loading "chunks" of the checkpoints for parallel computations
+### Loading "chunks" of checkpoints for parallel computations
 It is possible to split the checkpoints in N "chunks", e.g., useful if you want to run computations in parallel:
 ```
 chunks = []
