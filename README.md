@@ -37,6 +37,15 @@ for ckpt in MultiBERTCheckpoints.final_checkpoints():
     print(ckpt.config)
 ```
 
+### Loading "chunks" of the checkpoints for parallel computations
+It is possible to split the checkpoints in N "chunks", e.g., useful if you want to run computations in parallel:
+```
+chunks = []
+for chunk in self.checkpoints.split(N):
+    chunks.append(chunk)
+```
+
+### Dealing with limited disk space
 In case you don't want the checkpoints to fill up your disk space, use `clean_cache=True` to delete earlier checkpoints when iterating over these models (NB: You have to redownload these if you run it again!):
 ```
 from lm_checkpoints import PythiaCheckpoints
