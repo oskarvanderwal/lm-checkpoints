@@ -1,7 +1,8 @@
 # 🤖🚩lm-checkpoints
+
 > Simple library for dealing with language model checkpoints.
 
-*lm-checkpoints* should make it easier to work with intermediate training checkpoints that are provided for some language models (LMs). This allows you to iterate over the training steps, to define different subsets, to automatically clear the cache for previously seen checkpoints, etc. Nothing fancy, a simple wrapper for 🤗 models that should make it easier to study the training dynamics of LMs.
+**lm-checkpoints** should make it easier to work with intermediate training checkpoints that are provided for some language models (LMs), like MultiBERTs and Pythia. This library allows you to iterate over the training steps, to define different subsets, to automatically clear the cache for previously seen checkpoints, etc. Nothing fancy, simply a wrapper for 🤗 models that should make it easier to study their training dynamics.
 
 Install using `pip install lm-checkpoints`.
 
