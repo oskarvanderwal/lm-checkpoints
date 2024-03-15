@@ -1,10 +1,12 @@
 # 🤖🚩lm-checkpoints
-Simple library for dealing with language model checkpoints.
+> Simple library for dealing with language model checkpoints.
+
+*lm-checkpoints* should make it easier to work with intermediate training checkpoints that are provided for some language models. This allows you to iterate over the training steps, to define different subsets, to automatically clear the cache for previously seen checkpoints, etc. Nothing fancy, a simple wrapper for 🤗 models.
 
 Install using `pip install lm-checkpoints`.
 
 ## Checkpoints
-Currently implemented for:
+Currently implemented for the following models on HuggingFace:
 - [The Pythia models](https://github.com/EleutherAI/pythia)
 - [MultiBERTs](https://huggingface.co/google/multiberts-seed_0)
 
