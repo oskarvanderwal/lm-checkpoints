@@ -44,7 +44,8 @@ for ckpt in MultiBERTCheckpoints.final_checkpoints():
 It is possible to split the checkpoints in N "chunks", e.g., useful if you want to run computations in parallel:
 ```
 chunks = []
-for chunk in self.checkpoints.split(N):
+checkpoints = PythiaCheckpoints(size=160,seed=[0])
+for chunk in checkpoints.split(N):
     chunks.append(chunk)
 ```
 
