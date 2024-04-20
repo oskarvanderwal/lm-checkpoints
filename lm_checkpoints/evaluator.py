@@ -114,9 +114,9 @@ def main():
     parser.add_argument("--size", type=int, help="Size of the checkpoints model. Required for some models.")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size.")
     parser.add_argument("--tasks", type=str, nargs="+", help="List of tasks to evaluate.")
-    parser.add_argument("--log_samples", type=bool, default=False)
-    parser.add_argument("--skip_if_exists", type=bool, default=True)
-    parser.add_argument("--overwrite", type=bool, default=False)
+    parser.add_argument("--log_samples", action='store_true')
+    parser.add_argument("--skip_if_exists", action='store_true')
+    parser.add_argument("--overwrite", action='store_true')
 
     args = parser.parse_args()
 
