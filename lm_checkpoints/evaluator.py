@@ -51,7 +51,7 @@ def evaluate(
     """
     # https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md
     if not find_spec("lm_eval"):
-        raise Exception("Please install lm_eval through `pip install lm-checkpoints[eval]` or `pip install -e .[eval]`")
+        raise Exception("Please install lm_eval through `pip install \"lm-checkpoints[eval]\"` or `pip install -e .[eval]`")
     else:
         import lm_eval
         from lm_eval.models.huggingface import HFLM

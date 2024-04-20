@@ -58,7 +58,7 @@ for ckpt in PythiaCheckpoints(size=14,clean_cache=True):
     # Do something with ckpt.model or ckpt.tokenizer
 ```
 ### Evaluating checkpoints using lm-evaluation-harness
-If you install lm-checkpoints with the `eval` option (`pip install lm-checkpoints[eval]`), you can use the `evaluate` function to run [lm-evaluation-harness]() for all checkpoints:
+If you install lm-checkpoints with the `eval` option (`pip install "lm-checkpoints[eval]"`), you can use the `evaluate` function to run [lm-evaluation-harness]() for all checkpoints:
 ```python
 from lm_checkpoints import evaluate, PythiaCheckpoints
 
