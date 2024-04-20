@@ -9,16 +9,31 @@ packages = [
             {include = "lm_checkpoints"}
 ]
 
+[tool.poetry.scripts]
+evaluate_checkpoints = "lm_checkpoints.evaluator:main"
+
+[tool.black]
+skip-string-normalization = true
+line-length = 120
+
+[tool.ruff]
+# Same as Black.
+line-length = 120
+
 [tool.poetry.dependencies]
 python = "^3.8"
 transformers = "^4.35.0"
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 accelerate = "^0.24.1"
-
+lm-eval = {version = "^0.4.2", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
 black = "^23.11.0"
+ruff = "^0.4.1"
+
+[tool.poetry.extras]
+eval = ["lm-eval"]
 
 [build-system]
 requires = ["poetry-core"]
