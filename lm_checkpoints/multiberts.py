@@ -62,7 +62,7 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
 
     @property
     def name(self) -> str:
-        return f"MultiBERTs"
+        return "MultiBERTs"
 
     @staticmethod
     def last_step() -> int:
@@ -97,9 +97,7 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         Returns:
             list[dict[str, int]]: List of dicts (seed, step) describing each checkpoint.
         """
-        return list(
-            {"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps)
-        )
+        return list({"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps))
 
     def __len__(self):
         return len(self.seeds) * len(self.steps)
@@ -124,7 +122,7 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         model.eval()
         model = model.to(self.device)
 
-        commit_hash = self.get_revision_hash(model_name, f"main")
+        commit_hash = self.get_revision_hash(model_name, "main")
 
         return Checkpoint(
             model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash

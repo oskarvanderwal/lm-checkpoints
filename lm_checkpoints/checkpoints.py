@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from itertools import product
 import torch
-from pathlib import Path
 import numpy as np
 from typing import List, Dict, Union
 from huggingface_hub import scan_cache_dir
+
 
 def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
     """Transform a list of dictionaries to a dictionary of lists.
@@ -20,6 +19,7 @@ def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
     if not isinstance(list_of_dicts, list):
         list_of_dicts = [list_of_dicts]
     return {k: [dic[k] for dic in list_of_dicts] for k in list_of_dicts[0]}
+
 
 def chunk(L, n):
     """
@@ -39,7 +39,10 @@ def chunk(L, n):
     [['a'], ['b'], [], ['c'], ['d']]
     """
     size = len(L) / float(n)
-    I = lambda i: int(round(i))
+
+    def I(i):
+        return int(round(i))
+
     return [L[I(size * i) : I(size * (i + 1))] for i in range(n)]
 
 
@@ -55,9 +58,7 @@ class AbstractCheckpoints(ABC):
         elif device == "cuda":
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         elif device == "mps":
-            self.device = torch.device(
-                "mps" if torch.backends.mps.is_available() else "cpu"
-            )
+            self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
         self.clean_cache = clean_cache
 
@@ -82,14 +83,7 @@ class AbstractCheckpoints(ABC):
                 start = ci[0].item()
                 end = ci[-1].item()
                 cfg = self.config
-                cfg.update(
-                    {
-                        k: set(v)
-                        for k, v in records_to_list(
-                            self.checkpoints[start : end + 1]
-                        ).items()
-                    }
-                )
+                cfg.update({k: set(v) for k, v in records_to_list(self.checkpoints[start : end + 1]).items()})
                 # ckpts.append(self.__class__(seeds=set(cfg["seed"]), steps=set(cfg["step"])))
                 ckpts.append(self.__class__(**cfg))
         return ckpts
@@ -130,20 +124,19 @@ class AbstractCheckpoints(ABC):
         delete_hash = []
         for cfg in self.checkpoints:
             if self.clean_cache and len(delete_hash) > 0:
-                cache_info = scan_cache_dir()
-                delete_strategy = cache_info.delete_revisions(commit_hash)
-                delete_strategy.execute()
-            try:
-                ckpt = self.get_checkpoint(**cfg)
+                for commit_hash in delete_hash:
+                    cache_info = scan_cache_dir()
+                    delete_strategy = cache_info.delete_revisions(commit_hash)
+                    delete_strategy.execute()
 
-                # Add commit_hash to be deleted if self.clean_cache strategy
-                if "commit_hash" in ckpt.config:
-                    commit_hash = ckpt.config["commit_hash"]
-                    if commit_hash:
-                        delete_hash.append(commit_hash)
-                yield ckpt
-            except:
-                continue
+            ckpt = self.get_checkpoint(**cfg)
+
+            # Add commit_hash to be deleted if self.clean_cache strategy
+            if "commit_hash" in ckpt.config:
+                commit_hash = ckpt.config["commit_hash"]
+                if commit_hash:
+                    delete_hash.append(commit_hash)
+            yield ckpt
 
 
 class Checkpoint:

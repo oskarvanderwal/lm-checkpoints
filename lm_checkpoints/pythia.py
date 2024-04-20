@@ -37,9 +37,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
         else:
             self.seeds = self._seeds
 
-        self._steps = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(
-            range(1000, 144000, 1000)
-        )
+        self._steps = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(range(1000, 144000, 1000))
         if step:
             assert set(step).issubset(set(self._steps))
             self.steps = step
@@ -85,9 +83,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
         Returns:
             list[dict[str, int]]: List of dicts (seed, step) describing each checkpoint.
         """
-        return list(
-            {"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps)
-        )
+        return list({"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps))
 
     def __len__(self):
         return len(self.seeds) * len(self.steps)
