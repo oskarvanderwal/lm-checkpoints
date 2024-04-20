@@ -51,7 +51,9 @@ def evaluate(
     """
     # https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md
     if not find_spec("lm_eval"):
-        raise Exception("Please install lm_eval through `pip install \"lm-checkpoints[eval]\"` or `pip install -e .[eval]`")
+        raise Exception(
+            'Please install lm_eval through `pip install "lm-checkpoints[eval]"` or `pip install -e .[eval]`'
+        )
     else:
         import lm_eval
         from lm_eval.models.huggingface import HFLM
@@ -114,18 +116,23 @@ def main():
     parser.add_argument("--size", type=int, help="Size of the checkpoints model. Required for some models.")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size.")
     parser.add_argument("--tasks", type=str, nargs="+", help="List of tasks to evaluate.")
-    parser.add_argument("--log_samples", action='store_true')
-    parser.add_argument("--skip_if_exists", action='store_true')
-    parser.add_argument("--overwrite", action='store_true')
+    parser.add_argument("--log_samples", action="store_true")
+    parser.add_argument("--skip_if_exists", action="store_true")
+    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--clean_cache", action="store_true")
 
     args = parser.parse_args()
 
     if args.checkpoints == "multiberts":
-        checkpoints = MultiBERTCheckpoints(seed=args.seed, step=args.step, device=args.device)
+        checkpoints = MultiBERTCheckpoints(
+            seed=args.seed, step=args.step, device=args.device, clean_cache=args.clean_cache
+        )
     elif args.checkpoints == "pythia":
         if not args.size:
             raise ValueError("Please provide the model size of the Pythia models to evaluate, e.g., `--size 70`.")
-        checkpoints = PythiaCheckpoints(size=args.size, seed=args.seed, step=args.step, device=args.device)
+        checkpoints = PythiaCheckpoints(
+            size=args.size, seed=args.seed, step=args.step, device=args.device, clean_cache=args.clean_cache
+        )
 
     evaluate(
         checkpoints,
