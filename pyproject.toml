@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lm-checkpoints"
-version = "0.1.13"
+version = "0.1.14"
 description = "Simple library for loading checkpoints of language models."
 authors = ["Oskar van der Wal <odw@duck.com>"]
 license = "MIT"
