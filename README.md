@@ -10,7 +10,10 @@ Currently implemented for the following models on HuggingFace:
 - [The Pythia models](https://github.com/EleutherAI/pythia)
 - [MultiBERTs](https://huggingface.co/google/multiberts-seed_0)
 
-## Example
+## Usage examples
+> [!NOTE]  
+> The term seed here refers to the seed of the training run, not a random seed you would set for e.g., doing the evaluations.
+
 Say you want to compute some metrics for all model checkpoints of Pythia 160m, but only seed 0.
 
 ```python
