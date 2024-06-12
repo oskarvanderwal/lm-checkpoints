@@ -1,6 +1,5 @@
-# 🤖🚩lm-checkpoints
-
-> Simple library for dealing with language model checkpoints to study training dynamics.
+# lm-checkpoints 🤖🚩
+> Simple library for dealing with language model checkpoints for studying training dynamics.
 
 **lm-checkpoints** should make it easier to work with intermediate training checkpoints that are provided for some language models (LMs), like MultiBERTs and Pythia. This library allows you to iterate over the training steps, to define different subsets, to automatically clear the cache for previously seen checkpoints, etc. Nothing fancy, simply a wrapper for 🤗 models that should make it easier to study their training dynamics.
 
@@ -11,7 +10,10 @@ Currently implemented for the following models on HuggingFace:
 - [The Pythia models](https://github.com/EleutherAI/pythia)
 - [MultiBERTs](https://huggingface.co/google/multiberts-seed_0)
 
-## Example
+## Usage examples
+> [!NOTE]  
+> The term seed here refers to the seed of the training run, not a random seed you would set for e.g., doing the evaluations.
+
 Say you want to compute some metrics for all model checkpoints of Pythia 160m, but only seed 0.
 
 ```python
