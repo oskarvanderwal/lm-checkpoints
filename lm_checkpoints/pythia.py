@@ -9,7 +9,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
 
     def __init__(
         self,
-        size: int = 70,
+        size: str = "14m",
         step: List[int] = None,
         seed: List[int] = None,
         deduped: bool = False,
@@ -18,7 +18,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
         """Initialize the PythiaCheckpoints.
 
         Args:
-            size (int): Model size. Defaults to 70.
+            size (str): Model size. Defaults to "14m".
             step (List[int], optional): List of steps to consider, uses all available steps if not specified.
             seed (List[int], optional): List of seeds to consider, uses all available seeds if not specified.
             deduped (bool, optional): Specifies whether to use the deduped version of Pythia. Defaults to False.
@@ -26,11 +26,20 @@ class PythiaCheckpoints(AbstractCheckpoints):
         super().__init__(**kwargs)
 
         self.deduped = deduped
+
+        self._size = ["14m", "31m", "70m", "160m", "410m", "1b", "1.4b", "2.8b", "6.9b", "12b"]
+        assert size in self._size
         self.size = size
+
         if deduped:
             raise NotImplementedError
 
-        self._seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        # Different seeds only available for the smaller models
+        if self.size in ["1b", "1.4b", "2.8b", "6.9b", "12b"]:
+            self._seeds = [0]
+        else:
+            self._seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        
         if seed:
             assert set(seed).issubset(set(self._seeds))
             self.seeds = seed
@@ -46,7 +55,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
 
     @property
     def name(self) -> str:
-        return f"Pythia {self.size}m"
+        return f"Pythia {self.size}"
 
     @staticmethod
     def last_step() -> int:
@@ -72,9 +81,9 @@ class PythiaCheckpoints(AbstractCheckpoints):
             str: Name of the checkpoint on HF.
         """
         if seed == 0:
-            return f"EleutherAI/pythia-{self.size}m"
+            return f"EleutherAI/pythia-{self.size}"
         else:
-            return f"EleutherAI/pythia-{self.size}m-seed{seed}"
+            return f"EleutherAI/pythia-{self.size}-seed{seed}"
 
     @property
     def checkpoints(self) -> List[Dict[str, int]]:
@@ -106,5 +115,5 @@ class PythiaCheckpoints(AbstractCheckpoints):
         commit_hash = self.get_revision_hash(model_name, f"step{step}")
 
         return Checkpoint(
-            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash
+            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash, revision=f"step{step}"
         )

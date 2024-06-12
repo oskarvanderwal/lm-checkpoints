@@ -19,7 +19,7 @@ Say you want to compute some metrics for all model checkpoints of Pythia 160m, b
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size=160,seed=[0]):
+for ckpt in PythiaCheckpoints(size="160m",seed=[0]):
     # Do something with ckpt.model, ckpt.config or ckpt.tokenizer
     print(ckpt.config)
 ```
@@ -28,7 +28,7 @@ Or if you only want to load steps `0, 1, 2, 4, 8, 16` for all available seeds:
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size=160,step=[0, 1, 2, 4, 8, 16]):
+for ckpt in PythiaCheckpoints(size="1.8b",step=[0, 1, 2, 4, 8, 16]):
     # Do something with ckpt.model, ckpt.config or ckpt.tokenizer
     print(ckpt.config)
 ```
@@ -46,7 +46,7 @@ for ckpt in MultiBERTCheckpoints.final_checkpoints():
 It is possible to split the checkpoints in N "chunks", e.g., useful if you want to run computations in parallel:
 ```python
 chunks = []
-checkpoints = PythiaCheckpoints(size=160,seed=[0])
+checkpoints = PythiaCheckpoints(size="70m",seed=[0])
 for chunk in checkpoints.split(N):
     chunks.append(chunk)
 ```
@@ -56,7 +56,7 @@ In case you don't want the checkpoints to fill up your disk space, use `clean_ca
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size=14,clean_cache=True):
+for ckpt in PythiaCheckpoints(size="14m",clean_cache=True):
     # Do something with ckpt.model or ckpt.tokenizer
 ```
 ### Evaluating checkpoints using lm-evaluation-harness
@@ -64,7 +64,7 @@ If you install lm-checkpoints with the `eval` option (`pip install "lm-checkpoin
 ```python
 from lm_checkpoints import evaluate, PythiaCheckpoints
 
-ckpts = PythiaCheckpoints(size=14, step=[0, 1, 2, 4], seed=[0], device="cuda")
+ckpts = PythiaCheckpoints(size="14m", step=[0, 1, 2, 4], seed=[0], device="cuda")
 
 evaluate(
     ckpts,
@@ -78,7 +78,7 @@ evaluate(
 
 Or you can use the `evaluate_checkpoints` script:
 ```bash
-evaluate_checkpoints pythia --output test_results --size 14 --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
+evaluate_checkpoints pythia --output test_results --size 14m --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
 ```
 
 Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`), and if using the `--log_samples` option, a json file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.json`).
