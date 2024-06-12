@@ -79,4 +79,4 @@ Or you can use the `evaluate_checkpoints` script:
 evaluate_checkpoints pythia --output test_results --size 14 --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
 ```
 
-Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`), and if using the `--log_samples` option, a jsonl file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.jsonl`).
+Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`), and if using the `--log_samples` option, a json file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.json`).

@@ -102,7 +102,7 @@ def evaluate(
                         default=_handle_non_serializable,
                         ensure_ascii=False,
                     )
-                    output_samples_file.with_suffix(".jsonl").write_text(samples_dumped, encoding="utf-8")
+                    output_samples_file.with_suffix(".json").write_text(samples_dumped, encoding="utf-8")
 
 
 def main():
