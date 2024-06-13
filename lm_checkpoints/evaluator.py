@@ -113,7 +113,7 @@ def main():
     parser.add_argument("--output", type=str, required=True, help="Path to directory where to store results.")
     parser.add_argument("--seed", type=int, nargs="+", help="Selection of seeds for the checkpoints. Defaults to all.")
     parser.add_argument("--step", type=int, nargs="+", help="Selection of steps for the checkpoints. Defaults to all.")
-    parser.add_argument("--size", type=int, help="Size of the checkpoints model. Required for some models.")
+    parser.add_argument("--size", type=str, help="Size of the checkpoints model. Required for some models.")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size.")
     parser.add_argument("--tasks", type=str, nargs="+", help="List of tasks to evaluate.")
     parser.add_argument("--log_samples", action="store_true")
