@@ -129,7 +129,7 @@ def main():
         )
     elif args.checkpoints == "pythia":
         if not args.size:
-            raise ValueError("Please provide the model size of the Pythia models to evaluate, e.g., `--size 70`.")
+            raise ValueError("Please provide the model size of the Pythia models to evaluate, e.g., `--size 70m`.")
         checkpoints = PythiaCheckpoints(
             size=args.size, seed=args.seed, step=args.step, device=args.device, clean_cache=args.clean_cache
         )
