@@ -7,8 +7,11 @@ Install using `pip install lm-checkpoints`.
 
 ## Checkpoints
 Currently implemented for the following models on HuggingFace:
-- [The Pythia models](https://github.com/EleutherAI/pythia)
-- [MultiBERTs](https://huggingface.co/google/multiberts-seed_0)
+- [Pythia](https://github.com/EleutherAI/pythia) - 14m to 12b, multiple seeds
+- [MultiBERTs](https://huggingface.co/google/multiberts-seed_0) - BERT with 5 seeds
+- [OLMo](https://huggingface.co/allenai/OLMo-7B) - AI2's open language models (1B-32B)
+- [Tri](https://huggingface.co/trillionlabs/Tri-70B-Intermediate-Checkpoints) - Trillion Labs (0.5B-70B)
+- [OpenMoE](https://github.com/XueFuzhao/OpenMoE) - Mixture-of-Experts models (8B, 34B)
 
 ## Usage examples
 > [!NOTE]  
@@ -39,6 +42,23 @@ from lm_checkpoints import MultiBERTCheckpoints
 
 for ckpt in MultiBERTCheckpoints.final_checkpoints():
     # Do something with ckpt.model, ckpt.config or ckpt.tokenizer
+    print(ckpt.config)
+```
+
+### OLMo, Tri, and OpenMoE
+```python
+from lm_checkpoints import OLMoCheckpoints, TriCheckpoints, OpenMoECheckpoints
+
+# OLMo 7B at specific training steps
+for ckpt in OLMoCheckpoints(size="7b", step=[1000, 2000, 3000]):
+    print(ckpt.config)
+
+# Tri 70B intermediate checkpoints (tokens in billions)
+for ckpt in TriCheckpoints(size="70b", step=[160, 320]):
+    print(ckpt.config)
+
+# OpenMoE 8B at different token checkpoints
+for ckpt in OpenMoECheckpoints(size="8b", step=[400, 600, 800]):
     print(ckpt.config)
 ```
 

@@ -322,3 +322,171 @@ def test__split_equal_to_checkpoints():
     assert len(splits) == 4
     for s in splits:
         assert len(s) == 1
+
+
+# =============================================================================
+# OLMoCheckpoints tests
+# =============================================================================
+
+from lm_checkpoints import OLMoCheckpoints
+
+
+def test__olmo_valid_sizes():
+    valid_sizes = ["7b", "7b-twin-2t", "1b-v2", "7b-v2", "13b-v2"]
+    for size in valid_sizes:
+        ckpts = OLMoCheckpoints(size=size, step=[1000])
+        assert ckpts.size == size
+
+
+def test__olmo_invalid_size():
+    with pytest.raises(ValueError, match="Invalid size"):
+        OLMoCheckpoints(size="invalid", step=[1000])
+
+
+def test__olmo_name_property():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000])
+    assert ckpts.name == "OLMo 7b"
+
+
+def test__olmo_last_step():
+    assert OLMoCheckpoints.last_step() == 556000
+
+
+def test__olmo_config():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000])
+    assert ckpts.config == {"size": "7b"}
+
+
+def test__olmo_checkpoints_property():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000, 2000, 3000])
+    checkpoints = ckpts.checkpoints
+    assert len(checkpoints) == 3
+    assert {"step": 1000} in checkpoints
+    assert {"step": 3000} in checkpoints
+
+
+def test__olmo_len():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000, 2000])
+    assert len(ckpts) == 2
+
+
+def test__olmo_model_name():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000])
+    assert ckpts.get_model_name() == "allenai/OLMo-7B"
+
+    ckpts_v2 = OLMoCheckpoints(size="7b-v2", step=[1000])
+    assert ckpts_v2.get_model_name() == "allenai/OLMo-2-1124-7B"
+
+
+# =============================================================================
+# TriCheckpoints tests
+# =============================================================================
+
+from lm_checkpoints import TriCheckpoints
+
+
+def test__tri_valid_sizes():
+    # Each size has different token intervals
+    size_to_step = {"0.5b": [20], "1.9b": [40], "7b": [160], "70b": [160]}
+    for size, step in size_to_step.items():
+        ckpts = TriCheckpoints(size=size, step=step)
+        assert ckpts.size == size
+
+
+def test__tri_invalid_size():
+    with pytest.raises(ValueError, match="Invalid size"):
+        TriCheckpoints(size="invalid")
+
+
+def test__tri_name_property():
+    ckpts = TriCheckpoints(size="70b", step=[160])
+    assert ckpts.name == "Tri 70b"
+
+
+def test__tri_last_step():
+    assert TriCheckpoints.last_step() == 2000
+
+
+def test__tri_config():
+    ckpts = TriCheckpoints(size="7b", step=[160])
+    assert ckpts.config == {"size": "7b"}
+
+
+def test__tri_checkpoints_property():
+    ckpts = TriCheckpoints(size="7b", step=[160, 320])
+    checkpoints = ckpts.checkpoints
+    assert len(checkpoints) == 2
+    assert {"step": 160} in checkpoints
+
+
+def test__tri_len():
+    ckpts = TriCheckpoints(size="0.5b", step=[20, 40])
+    assert len(ckpts) == 2
+
+
+def test__tri_model_name():
+    ckpts = TriCheckpoints(size="70b", step=[160])
+    assert ckpts.get_model_name() == "trillionlabs/Tri-70B-Intermediate-Checkpoints"
+
+
+# =============================================================================
+# OpenMoECheckpoints tests
+# =============================================================================
+
+from lm_checkpoints import OpenMoECheckpoints
+
+
+def test__openmoe_valid_sizes():
+    valid_sizes = ["base", "8b", "34b"]
+    for size in valid_sizes:
+        step = [200] if size == "34b" else ([None] if size == "base" else [400])
+        ckpts = OpenMoECheckpoints(size=size, step=step)
+        assert ckpts.size == size
+
+
+def test__openmoe_invalid_size():
+    with pytest.raises(ValueError, match="Invalid size"):
+        OpenMoECheckpoints(size="invalid")
+
+
+def test__openmoe_name_property():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400])
+    assert ckpts.name == "OpenMoE 8b"
+
+
+def test__openmoe_last_step():
+    assert OpenMoECheckpoints.last_step() == 1100
+
+
+def test__openmoe_config():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400])
+    assert ckpts.config == {"size": "8b"}
+
+
+def test__openmoe_checkpoints_property():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400, 600, 800])
+    checkpoints = ckpts.checkpoints
+    assert len(checkpoints) == 3
+    assert {"step": 400} in checkpoints
+    assert {"step": 800} in checkpoints
+
+
+def test__openmoe_len():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400, 600])
+    assert len(ckpts) == 2
+
+
+def test__openmoe_model_name():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400])
+    assert ckpts.get_model_name(400) == "OrionZheng/openmoe-8b-400B"
+    assert ckpts.get_model_name(1100) == "OrionZheng/openmoe-8b"
+
+
+def test__openmoe_8b_all_steps():
+    ckpts = OpenMoECheckpoints(size="8b")
+    assert ckpts.steps == [400, 600, 800, 1000, 1100]
+
+
+def test__openmoe_34b_steps():
+    ckpts = OpenMoECheckpoints(size="34b")
+    assert ckpts.steps == [200]
