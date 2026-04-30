@@ -8,7 +8,9 @@ def main():
     parser.add_argument("checkpoints", type=str, choices=["pythia", "multiberts"], help="Checkpoints to download")
     parser.add_argument("--seed", type=int, nargs="+", help="Selection of seeds for the checkpoints. Defaults to all.")
     parser.add_argument("--step", type=int, nargs="+", help="Selection of steps for the checkpoints. Defaults to all.")
-    parser.add_argument("--size", type=int, help="Size of the checkpoints model. Required for some models.")
+    parser.add_argument("--size", type=str, help="Size of the checkpoints model. Required for some models.")
+    parser.add_argument("--device", type=str, choices=["cpu", "cuda", "mps"], default="cpu")
+    parser.add_argument("--clean_cache", action="store_true")
     args = parser.parse_args()
 
     if args.checkpoints == "multiberts":

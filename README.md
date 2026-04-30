@@ -28,7 +28,7 @@ Or if you only want to load steps `0, 1, 2, 4, 8, 16` for all available seeds:
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size="1.8b",step=[0, 1, 2, 4, 8, 16]):
+for ckpt in PythiaCheckpoints(size="1.4b",step=[0, 1, 2, 4, 8, 16]):
     # Do something with ckpt.model, ckpt.config or ckpt.tokenizer
     print(ckpt.config)
 ```

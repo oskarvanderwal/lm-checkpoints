@@ -91,7 +91,7 @@ def evaluate(
             if log_samples:
                 samples = results.pop("samples")
             dumped = json.dumps(results, indent=2, default=_handle_non_serializable, ensure_ascii=False)
-            path.open("w", encoding="utf-8").write(dumped)
+            path.write_text(dumped, encoding="utf-8")
 
             if log_samples:
                 for task_name, config in results["configs"].items():

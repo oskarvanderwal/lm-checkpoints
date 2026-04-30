@@ -59,6 +59,8 @@ class AbstractCheckpoints(ABC):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         elif device == "mps":
             self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+        else:
+            raise ValueError(f"Invalid device: {device}. Must be one of: 'cpu', 'cuda', 'mps'")
 
         self.clean_cache = clean_cache
 
@@ -90,7 +92,7 @@ class AbstractCheckpoints(ABC):
 
     @property
     @abstractmethod
-    def name():
+    def name(self):
         pass
 
     @property
