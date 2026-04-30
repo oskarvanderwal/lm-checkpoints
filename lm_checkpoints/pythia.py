@@ -39,7 +39,7 @@ class PythiaCheckpoints(AbstractCheckpoints):
             self._seeds = [0]
         else:
             self._seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        
+
         if seed:
             assert set(seed).issubset(set(self._seeds))
             self.seeds = seed
@@ -115,5 +115,11 @@ class PythiaCheckpoints(AbstractCheckpoints):
         commit_hash = self.get_revision_hash(model_name, f"step{step}")
 
         return Checkpoint(
-            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash, revision=f"step{step}"
+            model,
+            tokenizer=tokenizer,
+            model_name=model_name,
+            seed=seed,
+            step=step,
+            commit_hash=commit_hash,
+            revision=f"step{step}",
         )

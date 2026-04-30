@@ -2,6 +2,7 @@ import argparse
 from lm_checkpoints import PythiaCheckpoints, MultiBERTCheckpoints
 from huggingface_hub import snapshot_download
 
+
 def main():
     # All the logic of argparse goes in this function
     parser = argparse.ArgumentParser(description="Download checkpoints from the HuggingFace hub.")

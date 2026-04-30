@@ -9,6 +9,7 @@ import torch
 # Device loading tests (require model downloads)
 # =============================================================================
 
+
 @multi_device
 def test__pythia_multi_device(device: str):
     ckpt = PythiaCheckpoints(step=[143000], seed=[0], device=device)[0]
@@ -24,6 +25,7 @@ def test__multibert_multi_device(device: str):
 # =============================================================================
 # PythiaCheckpoints tests
 # =============================================================================
+
 
 def test__pythia_sizes():
     pythia_ckpts = PythiaCheckpoints(step=[143000], seed=[0])
@@ -118,6 +120,7 @@ def test__pythia_deduped_not_implemented():
 # MultiBERTCheckpoints tests
 # =============================================================================
 
+
 def test__multiberts_sizes():
     berts_ckpts = MultiBERTCheckpoints(step=[0], seed=[0])
     assert len(berts_ckpts) == 1
@@ -183,15 +186,44 @@ def test__multiberts_default_seeds():
 
 def test__multiberts_default_steps():
     ckpts = MultiBERTCheckpoints(seed=[0])
-    expected_steps = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200,
-                     300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200,
-                     1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
+    expected_steps = [
+        0,
+        20,
+        40,
+        60,
+        80,
+        100,
+        120,
+        140,
+        160,
+        180,
+        200,
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900,
+        1000,
+        1100,
+        1200,
+        1300,
+        1400,
+        1500,
+        1600,
+        1700,
+        1800,
+        1900,
+        2000,
+    ]
     assert ckpts.steps == expected_steps
 
 
 # =============================================================================
 # Device validation tests
 # =============================================================================
+
 
 def test__invalid_device():
     with pytest.raises(ValueError, match="Invalid device"):
@@ -207,6 +239,7 @@ def test__valid_devices():
 # =============================================================================
 # Checkpoint class tests
 # =============================================================================
+
 
 def test__checkpoint_basic():
     mock_model = torch.nn.Linear(10, 10)
@@ -239,6 +272,7 @@ def test__checkpoint_extra_kwargs():
 # =============================================================================
 # Utility function tests
 # =============================================================================
+
 
 def test__records_to_list_from_list():
     input_data = [{"a": 1, "b": 2}, {"a": 3, "b": 4}]
@@ -273,6 +307,7 @@ def test__chunk_more_chunks_than_items():
 # =============================================================================
 # Split edge cases
 # =============================================================================
+
 
 def test__split_more_than_checkpoints():
     ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
