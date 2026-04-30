@@ -1,15 +1,26 @@
-[tool.poetry]
+[project]
 name = "lm-checkpoints"
 version = "0.1.15"
 description = "Simple library for loading checkpoints of language models."
-authors = ["Oskar van der Wal <odw@duck.com>"]
-license = "MIT"
+authors = [{name = "Oskar van der Wal", email = "odw@duck.com"}]
+license = {text = "MIT"}
 readme = "README.md"
-packages = [
-            {include = "lm_checkpoints"}
+requires-python = ">=3.8"
+dependencies = [
+    "transformers>=4.35.0",
+    "torch>=2.0.0,!=2.0.1,!=2.1.0",
+    "accelerate>=0.24.1",
 ]
 
-[tool.poetry.scripts]
+[project.optional-dependencies]
+eval = ["lm-eval>=0.4.2"]
+dev = [
+    "pytest>=7.4.3",
+    "black>=23.11.0",
+    "ruff>=0.4.1",
+]
+
+[project.scripts]
 evaluate_checkpoints = "lm_checkpoints.evaluator:main"
 
 [tool.black]
@@ -17,24 +28,11 @@ skip-string-normalization = true
 line-length = 120
 
 [tool.ruff]
-# Same as Black.
 line-length = 120
 
-[tool.poetry.dependencies]
-python = "^3.8"
-transformers = "^4.35.0"
-torch = ">=2.0.0, !=2.0.1, !=2.1.0"
-accelerate = "^0.24.1"
-lm-eval = {version = "^0.4.2", optional = true}
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-black = "^23.11.0"
-ruff = "^0.4.1"
-
-[tool.poetry.extras]
-eval = ["lm-eval"]
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lm_checkpoints"]
