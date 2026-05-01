@@ -61,8 +61,6 @@ class AbstractCheckpoints(ABC):
         cache_policy: CachePolicy = "keep",
         max_cache_size_gb: Optional[float] = None,
         local_files_only: bool = False,
-        # Deprecated parameters (kept for backwards compatibility)
-        clean_cache: bool = False,
     ):
         """Initialize checkpoints iterator.
 
@@ -77,7 +75,6 @@ class AbstractCheckpoints(ABC):
                 - "temporary": Use a temporary cache directory, deleted when iteration ends.
             max_cache_size_gb: Maximum cache size in GB (only used with cache_policy="bounded").
             local_files_only: If True, only load from local cache (no downloads).
-            clean_cache: Deprecated, use cache_policy="previous" instead.
         """
         self.low_cpu_mem_usage = True if device == "cpu" else False
 
@@ -90,16 +87,6 @@ class AbstractCheckpoints(ABC):
             self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
         else:
             raise ValueError(f"Invalid device: {device}. Must be one of: 'cpu', 'cuda', 'mps'")
-
-        # Handle deprecated clean_cache parameter
-        if clean_cache:
-            import warnings
-            warnings.warn(
-                "clean_cache is deprecated, use cache_policy='previous' instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            cache_policy = "previous"
 
         if cache_policy not in ("keep", "previous", "bounded", "temporary"):
             raise ValueError(

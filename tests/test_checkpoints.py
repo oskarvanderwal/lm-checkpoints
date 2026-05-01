@@ -674,18 +674,6 @@ def test__local_files_only_default_false():
     assert ckpts.local_files_only is False
 
 
-def test__clean_cache_deprecated():
-    """Test that clean_cache shows deprecation warning and sets cache_policy."""
-    import warnings
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], clean_cache=True)
-        assert len(w) == 1
-        assert issubclass(w[0].category, DeprecationWarning)
-        assert "deprecated" in str(w[0].message).lower()
-        assert ckpts.cache_policy == "previous"
-
-
 def test__get_cache_size_gb():
     """Test that get_cache_size_gb returns a float."""
     cache_size = AbstractCheckpoints.get_cache_size_gb()
