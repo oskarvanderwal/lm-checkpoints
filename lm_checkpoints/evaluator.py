@@ -5,7 +5,14 @@ Borrowed most of the implementation from https://github.com/EleutherAI/lm-evalua
 from importlib.util import find_spec
 from pathlib import Path
 import json
-from lm_checkpoints import AbstractCheckpoints, PythiaCheckpoints, MultiBERTCheckpoints
+from lm_checkpoints import (
+    AbstractCheckpoints,
+    PythiaCheckpoints,
+    MultiBERTCheckpoints,
+    OLMoCheckpoints,
+    TriCheckpoints,
+    OpenMoECheckpoints,
+)
 import numpy as np
 from typing import List
 import os
@@ -106,9 +113,13 @@ def evaluate(
 
 
 def main():
-    # All the logic of argparse goes in this function
     parser = argparse.ArgumentParser(description="Evaluate checkpoints using lm-evaluation-harness.")
-    parser.add_argument("checkpoints", type=str, choices=["pythia", "multiberts"], help="Checkpoints to evaluate")
+    parser.add_argument(
+        "checkpoints",
+        type=str,
+        choices=["pythia", "multiberts", "olmo", "tri", "openmoe"],
+        help="Checkpoints to evaluate",
+    )
     parser.add_argument("--device", type=str, choices=["cpu", "cuda", "mps"], default="cpu")
     parser.add_argument("--output", type=str, required=True, help="Path to directory where to store results.")
     parser.add_argument("--seed", type=int, nargs="+", help="Selection of seeds for the checkpoints. Defaults to all.")
@@ -119,20 +130,45 @@ def main():
     parser.add_argument("--log_samples", action="store_true")
     parser.add_argument("--skip_if_exists", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument("--clean_cache", action="store_true")
+    parser.add_argument(
+        "--cache_policy",
+        type=str,
+        choices=["keep", "previous", "bounded", "temporary"],
+        default="keep",
+        help="Cache management policy.",
+    )
+    parser.add_argument("--max_cache_size_gb", type=float, help="Max cache size in GB (for cache_policy=bounded).")
+    parser.add_argument("--cache_dir", type=str, help="Custom cache directory.")
 
     args = parser.parse_args()
 
+    # Common cache kwargs
+    cache_kwargs = {
+        "device": args.device,
+        "cache_policy": args.cache_policy,
+        "cache_dir": args.cache_dir,
+    }
+    if args.max_cache_size_gb:
+        cache_kwargs["max_cache_size_gb"] = args.max_cache_size_gb
+
     if args.checkpoints == "multiberts":
-        checkpoints = MultiBERTCheckpoints(
-            seed=args.seed, step=args.step, device=args.device, clean_cache=args.clean_cache
-        )
+        checkpoints = MultiBERTCheckpoints(seed=args.seed, step=args.step, **cache_kwargs)
     elif args.checkpoints == "pythia":
         if not args.size:
             raise ValueError("Please provide the model size of the Pythia models to evaluate, e.g., `--size 70m`.")
-        checkpoints = PythiaCheckpoints(
-            size=args.size, seed=args.seed, step=args.step, device=args.device, clean_cache=args.clean_cache
-        )
+        checkpoints = PythiaCheckpoints(size=args.size, seed=args.seed, step=args.step, **cache_kwargs)
+    elif args.checkpoints == "olmo":
+        if not args.size:
+            raise ValueError("Please provide the model size of OLMo models to evaluate, e.g., `--size 7b`.")
+        checkpoints = OLMoCheckpoints(size=args.size, step=args.step, **cache_kwargs)
+    elif args.checkpoints == "tri":
+        if not args.size:
+            raise ValueError("Please provide the model size of Tri models to evaluate, e.g., `--size 7b`.")
+        checkpoints = TriCheckpoints(size=args.size, step=args.step, **cache_kwargs)
+    elif args.checkpoints == "openmoe":
+        if not args.size:
+            raise ValueError("Please provide the model size of OpenMoE models to evaluate, e.g., `--size 8b`.")
+        checkpoints = OpenMoECheckpoints(size=args.size, step=args.step, **cache_kwargs)
 
     evaluate(
         checkpoints,

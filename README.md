@@ -168,7 +168,14 @@ evaluate(
 
 Or you can use the `evaluate_checkpoints` script:
 ```bash
+# Pythia
 evaluate_checkpoints pythia --output test_results --size 14m --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
+
+# OLMo
+evaluate_checkpoints olmo --output test_results --size 7b --step 1000 2000 --tasks hellaswag --device cuda
+
+# With cache management
+evaluate_checkpoints pythia --output test_results --size 70m --tasks triviaqa --cache_policy bounded --max_cache_size_gb 50
 ```
 
 Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`), and if using the `--log_samples` option, a json file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.json`).

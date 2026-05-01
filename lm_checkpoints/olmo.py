@@ -96,18 +96,21 @@ class OLMoCheckpoints(AbstractCheckpoints):
         return step * self.TOKENS_PER_STEP
 
     def tokens_to_step(self, tokens: int) -> int:
-        """Convert tokens to nearest training step.
+        """Convert tokens to nearest available training step.
 
         Args:
             tokens: Number of tokens.
 
         Returns:
-            Nearest available training step.
+            Nearest available training step, clamped to valid range.
         """
         target_step = tokens // self.TOKENS_PER_STEP
         # Round to nearest 1000 (OLMo checkpoints are at 1000-step intervals)
         target_step = round(target_step / 1000) * 1000
-        return max(1000, target_step)  # Minimum step is 1000
+        # Clamp to available step range
+        min_step = min(self._steps)
+        max_step = max(self._steps)
+        return max(min_step, min(target_step, max_step))
 
     @property
     def checkpoints(self) -> List[Dict[str, int]]:

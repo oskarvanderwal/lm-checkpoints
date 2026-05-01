@@ -573,6 +573,15 @@ def test__olmo_tokens_to_step():
     assert ckpts.tokens_to_step(8_000_000_000) == 2000
 
 
+def test__olmo_tokens_to_step_clamps_to_range():
+    """Test that tokens_to_step clamps to available step range."""
+    ckpts = OLMoCheckpoints(size="7b", step=[1000, 2000, 3000])
+    # Very large token count should clamp to max step
+    assert ckpts.tokens_to_step(999_999_999_999_999) == 556000  # max step for 7b
+    # Zero tokens should clamp to min step
+    assert ckpts.tokens_to_step(0) == 1000  # min step
+
+
 def test__tri_step_to_tokens():
     ckpts = TriCheckpoints(size="70b", step=[160, 320])
     # Tri steps are in billions of tokens

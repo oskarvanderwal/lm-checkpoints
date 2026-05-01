@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import logging
 import tempfile
 import torch
 import numpy as np
@@ -6,6 +7,8 @@ from typing import List, Dict, Union, Literal, Optional
 from huggingface_hub import scan_cache_dir
 from huggingface_hub.errors import CacheNotFound
 
+
+logger = logging.getLogger(__name__)
 
 CachePolicy = Literal["keep", "previous", "bounded", "temporary"]
 
@@ -155,18 +158,29 @@ class AbstractCheckpoints(ABC):
         if current_size_gb <= self.max_cache_size_gb:
             return
 
+        logger.info(
+            f"Cache size ({current_size_gb:.2f}GB) exceeds limit ({self.max_cache_size_gb}GB), "
+            "pruning oldest revisions"
+        )
+
         # Collect all revisions with their last accessed time
         revisions = []
         for repo in cache_info.repos:
             for revision in repo.revisions:
-                revisions.append((revision.last_accessed, revision.commit_hash, revision.size_on_disk))
+                revisions.append((
+                    revision.last_accessed,
+                    revision.commit_hash,
+                    revision.size_on_disk,
+                    repo.repo_id,
+                ))
 
         # Sort by last accessed time (oldest first)
         revisions.sort(key=lambda x: x[0])
 
         # Delete oldest revisions until under limit
         deleted_count = 0
-        for last_accessed, commit_hash, size in revisions:
+        failed_count = 0
+        for last_accessed, commit_hash, size, repo_id in revisions:
             if current_size_gb <= self.max_cache_size_gb:
                 break
             try:
@@ -174,8 +188,15 @@ class AbstractCheckpoints(ABC):
                 delete_strategy.execute()
                 current_size_gb -= size / (1024**3)
                 deleted_count += 1
-            except Exception:
-                pass  # Skip if revision can't be deleted
+                logger.debug(f"Deleted cached revision {commit_hash[:8]} from {repo_id}")
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"Failed to delete cache revision {commit_hash[:8]}: {e}")
+
+        if deleted_count > 0:
+            logger.info(f"Pruned {deleted_count} cached revision(s), cache now {current_size_gb:.2f}GB")
+        if failed_count > 0:
+            logger.warning(f"Failed to delete {failed_count} revision(s)")
 
     def _delete_revision(self, commit_hash: str) -> bool:
         """Delete a specific revision from the cache.
@@ -191,8 +212,13 @@ class AbstractCheckpoints(ABC):
             cache_info = scan_cache_dir(cache_dir=effective_cache_dir)
             delete_strategy = cache_info.delete_revisions(commit_hash)
             delete_strategy.execute()
+            logger.debug(f"Deleted cached revision {commit_hash[:8]}")
             return True
-        except (CacheNotFound, Exception):
+        except CacheNotFound:
+            logger.debug(f"Cache not found when trying to delete revision {commit_hash[:8]}")
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to delete cache revision {commit_hash[:8]}: {e}")
             return False
 
     def _cleanup_temp_cache(self) -> None:
@@ -269,9 +295,23 @@ class AbstractCheckpoints(ABC):
         pass
 
     def __getitem__(self, index):
+        if self.cache_policy == "temporary":
+            logger.warning(
+                "Using __getitem__ with cache_policy='temporary' will not automatically "
+                "clean up the temp cache. Use iteration (for ckpt in checkpoints) instead, "
+                "or call _cleanup_temp_cache() manually when done."
+            )
         cfg = self.checkpoints[index]
         ckpt = self.get_checkpoint(**cfg)
         return ckpt
+
+    def __del__(self):
+        """Clean up temporary cache on object destruction (best effort)."""
+        if hasattr(self, "_temp_cache_dir") and self._temp_cache_dir is not None:
+            try:
+                self._cleanup_temp_cache()
+            except Exception:
+                pass
 
     def __iter__(self):
         delete_hashes = []
@@ -288,6 +328,11 @@ class AbstractCheckpoints(ABC):
                     delete_hashes.clear()
 
                 ckpt = self.get_checkpoint(**cfg)
+
+                # Enforce cache limit again after loading (for "bounded" policy)
+                # This ensures we stay under limit even with large checkpoints
+                if self.cache_policy == "bounded":
+                    self._enforce_cache_limit()
 
                 # Track commit_hash for deletion in "previous" policy
                 if self.cache_policy == "previous":
