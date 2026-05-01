@@ -22,6 +22,38 @@ def test__multibert_multi_device(device: str):
     assert ckpt.model.device.type == device
 
 
+# -----------------------------------------------------------------------------
+# Large model download tests (skipped by default)
+# Run with: pytest -k "olmo_download or tri_download or openmoe_download" --run-skipped
+# -----------------------------------------------------------------------------
+
+from lm_checkpoints import OLMoCheckpoints, TriCheckpoints, OpenMoECheckpoints
+
+
+@pytest.mark.skip(reason="Large model download (~2GB) - run explicitly if needed")
+def test__olmo_download():
+    """Test OLMo model download and loading."""
+    ckpt = OLMoCheckpoints(size="1b-v2", step=[1000], device="cpu")[0]
+    assert ckpt.model is not None
+    assert ckpt.tokenizer is not None
+
+
+@pytest.mark.skip(reason="Large model download (~1GB) - run explicitly if needed")
+def test__tri_download():
+    """Test Tri model download and loading."""
+    ckpt = TriCheckpoints(size="0.5b", step=[20], device="cpu")[0]
+    assert ckpt.model is not None
+    assert ckpt.tokenizer is not None
+
+
+@pytest.mark.skip(reason="Large model download (~16GB+) - run explicitly if needed")
+def test__openmoe_download():
+    """Test OpenMoE model download and loading."""
+    ckpt = OpenMoECheckpoints(size="8b", step=[400], device="cpu")[0]
+    assert ckpt.model is not None
+    assert ckpt.tokenizer is not None
+
+
 # =============================================================================
 # PythiaCheckpoints tests
 # =============================================================================
