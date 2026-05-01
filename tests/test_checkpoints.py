@@ -603,3 +603,44 @@ def test__openmoe_base_step_to_tokens():
     ckpts = OpenMoECheckpoints(size="base", step=[None])
     # Base model returns 0 for None step
     assert ckpts.step_to_tokens(None) == 0
+
+
+# =============================================================================
+# Cache management tests
+# =============================================================================
+
+
+def test__max_cache_size_parameter():
+    """Test that max_cache_size_gb parameter is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], max_cache_size_gb=50.0)
+    assert ckpts.max_cache_size_gb == 50.0
+
+
+def test__max_cache_size_default_none():
+    """Test that max_cache_size_gb defaults to None."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
+    assert ckpts.max_cache_size_gb is None
+
+
+def test__get_cache_size_gb():
+    """Test that get_cache_size_gb returns a float (or raises CacheNotFound if no cache)."""
+    from huggingface_hub.errors import CacheNotFound
+    try:
+        cache_size = AbstractCheckpoints.get_cache_size_gb()
+        assert isinstance(cache_size, float)
+        assert cache_size >= 0
+    except CacheNotFound:
+        # No HuggingFace cache exists yet, which is fine
+        pass
+
+
+def test__clean_cache_parameter():
+    """Test that clean_cache parameter is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], clean_cache=True)
+    assert ckpts.clean_cache is True
+
+
+def test__clean_cache_default_false():
+    """Test that clean_cache defaults to False."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
+    assert ckpts.clean_cache is False
