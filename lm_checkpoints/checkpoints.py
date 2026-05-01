@@ -218,6 +218,53 @@ class AbstractCheckpoints(ABC):
                     delete_hash.append(commit_hash)
             yield ckpt
 
+    def map(self, fn, include_config: bool = False):
+        """Apply a function to each checkpoint.
+
+        Args:
+            fn: Callable that takes a Checkpoint and returns a result.
+            include_config: If True, yield (config, result) tuples.
+
+        Yields:
+            Results from applying fn to each checkpoint, optionally with config.
+
+        Example:
+            >>> def evaluate(ckpt):
+            ...     return run_eval(ckpt.model, ckpt.tokenizer)
+            >>> results = list(checkpoints.map(evaluate))
+
+            >>> # With Inspect AI:
+            >>> results = list(checkpoints.map(
+            ...     lambda ckpt: inspect_eval(ckpt.model, tasks=[my_task])
+            ... ))
+        """
+        for ckpt in self:
+            result = fn(ckpt)
+            if include_config:
+                yield (ckpt.config, result)
+            else:
+                yield result
+
+    def map_collect(self, fn) -> List[Dict]:
+        """Apply a function to each checkpoint and collect results with metadata.
+
+        Args:
+            fn: Callable that takes a Checkpoint and returns a result.
+
+        Returns:
+            List of dicts with checkpoint config and result.
+
+        Example:
+            >>> results = checkpoints.map_collect(lambda ckpt: ckpt.model.num_parameters())
+            >>> # [{"model_name": "...", "step": 1000, "result": 125000000}, ...]
+        """
+        results = []
+        for ckpt in self:
+            entry = dict(ckpt.config)
+            entry["result"] = fn(ckpt)
+            results.append(entry)
+        return results
+
 
 class Checkpoint:
     """Convenience class for representing a checkpoint.

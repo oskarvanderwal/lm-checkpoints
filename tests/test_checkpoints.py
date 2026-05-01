@@ -644,3 +644,76 @@ def test__clean_cache_default_false():
     """Test that clean_cache defaults to False."""
     ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
     assert ckpts.clean_cache is False
+
+
+# =============================================================================
+# Map/apply functionality tests
+# =============================================================================
+
+
+class MockCheckpointsForMap(AbstractCheckpoints):
+    """Mock checkpoint class for testing map functionality without downloads."""
+
+    def __init__(self, num_checkpoints=3, **kwargs):
+        super().__init__(**kwargs)
+        self._num = num_checkpoints
+
+    @property
+    def name(self):
+        return "MockCheckpoints"
+
+    @property
+    def checkpoints(self):
+        return [{"step": i} for i in range(self._num)]
+
+    @staticmethod
+    def last_step():
+        return 2
+
+    @property
+    def config(self):
+        return {}
+
+    def get_checkpoint(self, step):
+        mock_model = torch.nn.Linear(10, 10)
+        return Checkpoint(model=mock_model, model_name=f"mock-{step}", step=step)
+
+    def __len__(self):
+        return self._num
+
+
+def test__map_basic():
+    """Test basic map functionality."""
+    ckpts = MockCheckpointsForMap(num_checkpoints=3)
+    results = list(ckpts.map(lambda ckpt: ckpt.config["step"]))
+    assert results == [0, 1, 2]
+
+
+def test__map_with_config():
+    """Test map with include_config=True."""
+    ckpts = MockCheckpointsForMap(num_checkpoints=2)
+    results = list(ckpts.map(lambda ckpt: ckpt.config["step"] * 2, include_config=True))
+    assert len(results) == 2
+    assert results[0][1] == 0  # step 0 * 2
+    assert results[1][1] == 2  # step 1 * 2
+    assert "model_name" in results[0][0]
+
+
+def test__map_collect():
+    """Test map_collect returns list of dicts with results."""
+    ckpts = MockCheckpointsForMap(num_checkpoints=3)
+    results = ckpts.map_collect(lambda ckpt: ckpt.config["step"] ** 2)
+    assert len(results) == 3
+    assert results[0]["result"] == 0
+    assert results[1]["result"] == 1
+    assert results[2]["result"] == 4
+    assert "model_name" in results[0]
+    assert "step" in results[0]
+
+
+def test__map_with_model_operation():
+    """Test map with actual model operation."""
+    ckpts = MockCheckpointsForMap(num_checkpoints=2)
+    results = list(ckpts.map(lambda ckpt: sum(p.numel() for p in ckpt.model.parameters())))
+    # Linear(10, 10) has 10*10 + 10 = 110 parameters
+    assert all(r == 110 for r in results)
