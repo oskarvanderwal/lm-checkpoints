@@ -3,7 +3,10 @@
 
 **lm-checkpoints** should make it easier to work with intermediate training checkpoints that are provided for some language models (LMs), like MultiBERTs and Pythia. This library allows you to iterate over the training steps, to define different subsets, to automatically clear the cache for previously seen checkpoints, etc. Nothing fancy, simply a wrapper for 🤗 models that should make it easier to study their training dynamics.
 
-Install using `pip install lm-checkpoints`.
+Install using `pip install lm-checkpoints` or with [uv](https://docs.astral.sh/uv/):
+```bash
+uv add lm-checkpoints
+```
 
 ## Checkpoints
 Currently implemented for the following models on HuggingFace:
@@ -62,6 +65,12 @@ for ckpt in OpenMoECheckpoints(size="8b", step=[400, 600, 800]):
     print(ckpt.config)
 ```
 
+### Device selection
+Load models on CPU, CUDA, or Apple Silicon (MPS):
+```python
+ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], device="cuda")  # or "cpu", "mps"
+```
+
 ### Loading "chunks" of checkpoints for parallel computations
 It is possible to split the checkpoints in N "chunks", e.g., useful if you want to run computations in parallel:
 ```python
@@ -76,8 +85,47 @@ In case you don't want the checkpoints to fill up your disk space, use `clean_ca
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size="14m",clean_cache=True):
+for ckpt in PythiaCheckpoints(size="14m", clean_cache=True):
     # Do something with ckpt.model or ckpt.tokenizer
+```
+
+You can also set a maximum cache size limit. When the HuggingFace cache exceeds this limit, the oldest cached models are automatically deleted:
+```python
+# Automatically clean cache when it exceeds 50GB
+for ckpt in PythiaCheckpoints(size="1.4b", max_cache_size_gb=50.0):
+    # Process checkpoint...
+```
+
+### Applying evaluation functions
+Use `map()` to apply any function to all checkpoints:
+```python
+from lm_checkpoints import PythiaCheckpoints
+
+ckpts = PythiaCheckpoints(size="14m", step=[0, 1000, 2000], seed=[0])
+
+# Simple iteration with results
+for result in ckpts.map(lambda ckpt: my_eval(ckpt.model)):
+    print(result)
+
+# With checkpoint metadata
+for config, result in ckpts.map(my_eval, include_config=True):
+    print(f"Step {config['step']}: {result}")
+
+# Collect all results as list of dicts
+results = ckpts.map_collect(lambda ckpt: my_eval(ckpt.model))
+# [{"model_name": "...", "step": 0, "seed": 0, "result": ...}, ...]
+```
+
+### Converting steps to tokens
+Each checkpoint class provides methods to convert between training steps and tokens seen:
+```python
+ckpts = PythiaCheckpoints(size="14m", step=[1000], seed=[0])
+
+# Get tokens seen at step 1000
+tokens = ckpts.step_to_tokens(1000)  # ~2.1B tokens
+
+# Find nearest step for a given token count
+step = ckpts.tokens_to_step(5_000_000_000)  # Returns nearest available step
 ```
 ### Evaluating checkpoints using lm-evaluation-harness
 If you install lm-checkpoints with the `eval` option (`pip install "lm-checkpoints[eval]"`), you can use the `evaluate` function to run [lm-evaluation-harness]() for all checkpoints:
