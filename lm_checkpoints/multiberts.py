@@ -99,8 +99,42 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
         """
         return list({"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps))
 
+    # MultiBERTs: batch_size=256, seq_len=512, steps are in thousands
+    # Step values (0, 20, ..., 2000) represent thousands of steps
+    TOKENS_PER_TRAINING_STEP = 131_072  # 256 * 512
+    STEPS_MULTIPLIER = 1000  # step=2000 means 2,000,000 training steps
+
     def __len__(self):
         return len(self.seeds) * len(self.steps)
+
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a checkpoint step to tokens seen.
+
+        MultiBERTs checkpoints are saved at intervals of 1000s of steps.
+        E.g., step=2000 means 2,000,000 training steps.
+        Each training step processes 131,072 tokens (batch=256 * seq_len=512).
+
+        Args:
+            step: Checkpoint step number (in thousands, e.g., 2000 = 2M steps).
+
+        Returns:
+            Number of tokens seen at this checkpoint.
+        """
+        training_steps = step * self.STEPS_MULTIPLIER
+        return training_steps * self.TOKENS_PER_TRAINING_STEP
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert tokens to nearest checkpoint step.
+
+        Args:
+            tokens: Number of tokens.
+
+        Returns:
+            Nearest available checkpoint step (in thousands).
+        """
+        training_steps = tokens // self.TOKENS_PER_TRAINING_STEP
+        target_step = training_steps // self.STEPS_MULTIPLIER
+        return min(self._steps, key=lambda s: abs(s - target_step))
 
     def get_checkpoint(self, seed, step) -> Checkpoint:
         model_name = self.get_model_name(step, seed)

@@ -77,6 +77,37 @@ class OpenMoECheckpoints(AbstractCheckpoints):
         """Get the HuggingFace repo for a specific checkpoint."""
         return self._CHECKPOINTS.get((self.size, step), f"OrionZheng/openmoe-{self.size}")
 
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a checkpoint step to tokens seen.
+
+        For OpenMoE models, 'step' is in billions of tokens.
+        E.g., step=400 means 400 billion tokens.
+
+        Args:
+            step: Token checkpoint (in billions). None for base model.
+
+        Returns:
+            Number of tokens seen, or 0 for base model.
+        """
+        if step is None:
+            return 0
+        return step * 1_000_000_000
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert tokens to nearest checkpoint step.
+
+        Args:
+            tokens: Number of tokens.
+
+        Returns:
+            Nearest available checkpoint step (in billions).
+        """
+        if self.size == "base":
+            return None
+        target_step = tokens // 1_000_000_000
+        available = [s for s in self._steps if s is not None]
+        return min(available, key=lambda s: abs(s - target_step))
+
     @property
     def checkpoints(self) -> List[Dict[str, int]]:
         return [{"step": s} for s in self.steps]

@@ -109,6 +109,28 @@ class AbstractCheckpoints(ABC):
     def get_checkpoint(self):
         pass
 
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a training step to the number of tokens seen.
+
+        Args:
+            step: Training step number.
+
+        Returns:
+            Number of tokens seen at this step.
+        """
+        raise NotImplementedError("Subclass must implement step_to_tokens")
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert number of tokens to the nearest training step.
+
+        Args:
+            tokens: Number of tokens.
+
+        Returns:
+            Training step number (rounded to nearest available step).
+        """
+        raise NotImplementedError("Subclass must implement tokens_to_step")
+
     @classmethod
     def final_checkpoints(cls, **kwargs):
         return cls(step=[cls.last_step()], **kwargs)

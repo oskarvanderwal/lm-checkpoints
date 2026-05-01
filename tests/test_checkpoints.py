@@ -490,3 +490,84 @@ def test__openmoe_8b_all_steps():
 def test__openmoe_34b_steps():
     ckpts = OpenMoECheckpoints(size="34b")
     assert ckpts.steps == [200]
+
+
+# =============================================================================
+# Step to tokens conversion tests
+# =============================================================================
+
+
+def test__pythia_step_to_tokens():
+    ckpts = PythiaCheckpoints(size="14m", step=[0, 1000], seed=[0])
+    # Pythia uses 2M tokens per step
+    assert ckpts.step_to_tokens(0) == 0
+    assert ckpts.step_to_tokens(1000) == 1000 * 2_097_152
+    assert ckpts.step_to_tokens(143000) == 143000 * 2_097_152  # ~300B tokens
+
+
+def test__pythia_tokens_to_step():
+    ckpts = PythiaCheckpoints(size="14m", step=[0, 1000, 2000], seed=[0])
+    # Should find nearest available step
+    assert ckpts.tokens_to_step(0) == 0
+    assert ckpts.tokens_to_step(2_097_152_000) == 1000  # 1000 steps worth
+    assert ckpts.tokens_to_step(3_000_000_000) == 1000  # Closer to 1000 than 2000
+
+
+def test__multiberts_step_to_tokens():
+    ckpts = MultiBERTCheckpoints(step=[0, 2000], seed=[0])
+    # MultiBERTs: step=2000 means 2M training steps * 131,072 tokens each
+    assert ckpts.step_to_tokens(0) == 0
+    assert ckpts.step_to_tokens(2000) == 2000 * 1000 * 131_072  # ~262B tokens
+
+
+def test__multiberts_tokens_to_step():
+    ckpts = MultiBERTCheckpoints(step=[0, 100, 200], seed=[0])
+    assert ckpts.tokens_to_step(0) == 0
+    # 100k steps * 131,072 = ~13B tokens
+    assert ckpts.tokens_to_step(13_000_000_000) == 100
+
+
+def test__olmo_step_to_tokens():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000, 2000])
+    # OLMo uses ~4M tokens per step
+    assert ckpts.step_to_tokens(1000) == 1000 * 4_194_304  # ~4B tokens
+    assert ckpts.step_to_tokens(2000) == 2000 * 4_194_304  # ~8B tokens
+
+
+def test__olmo_tokens_to_step():
+    ckpts = OLMoCheckpoints(size="7b", step=[1000, 2000])
+    # 4B tokens should map to step 1000
+    assert ckpts.tokens_to_step(4_000_000_000) == 1000
+    assert ckpts.tokens_to_step(8_000_000_000) == 2000
+
+
+def test__tri_step_to_tokens():
+    ckpts = TriCheckpoints(size="70b", step=[160, 320])
+    # Tri steps are in billions of tokens
+    assert ckpts.step_to_tokens(160) == 160_000_000_000  # 160B
+    assert ckpts.step_to_tokens(320) == 320_000_000_000  # 320B
+
+
+def test__tri_tokens_to_step():
+    ckpts = TriCheckpoints(size="70b", step=[160, 320])
+    assert ckpts.tokens_to_step(160_000_000_000) == 160
+    assert ckpts.tokens_to_step(200_000_000_000) == 160  # Closer to 160 than 320
+
+
+def test__openmoe_step_to_tokens():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400, 600])
+    # OpenMoE steps are in billions of tokens
+    assert ckpts.step_to_tokens(400) == 400_000_000_000  # 400B
+    assert ckpts.step_to_tokens(600) == 600_000_000_000  # 600B
+
+
+def test__openmoe_tokens_to_step():
+    ckpts = OpenMoECheckpoints(size="8b", step=[400, 600, 800])
+    assert ckpts.tokens_to_step(400_000_000_000) == 400
+    assert ckpts.tokens_to_step(500_000_000_000) == 400  # Closer to 400 than 600
+
+
+def test__openmoe_base_step_to_tokens():
+    ckpts = OpenMoECheckpoints(size="base", step=[None])
+    # Base model returns 0 for None step
+    assert ckpts.step_to_tokens(None) == 0

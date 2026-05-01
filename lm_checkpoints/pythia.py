@@ -94,8 +94,39 @@ class PythiaCheckpoints(AbstractCheckpoints):
         """
         return list({"seed": p[0], "step": p[1]} for p in product(self.seeds, self.steps))
 
+    # Pythia uses 2M tokens per step (batch_size=1024, seq_len=2048)
+    TOKENS_PER_STEP = 2_097_152
+
     def __len__(self):
         return len(self.seeds) * len(self.steps)
+
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a training step to tokens seen.
+
+        Pythia uses 2M tokens per step (batch_size=1024 * seq_len=2048).
+        Total training: ~300B tokens over 143k steps.
+
+        Args:
+            step: Training step number.
+
+        Returns:
+            Number of tokens seen at this step.
+        """
+        return step * self.TOKENS_PER_STEP
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert tokens to nearest training step.
+
+        Args:
+            tokens: Number of tokens.
+
+        Returns:
+            Nearest available training step.
+        """
+        target_step = tokens // self.TOKENS_PER_STEP
+        # Find nearest available step
+        available = self._steps
+        return min(available, key=lambda s: abs(s - target_step))
 
     def get_checkpoint(self, seed, step) -> Checkpoint:
         model_name = self.get_model_name(seed)

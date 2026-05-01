@@ -73,13 +73,41 @@ class OLMoCheckpoints(AbstractCheckpoints):
     def get_model_name(self) -> str:
         return self._SIZE_TO_REPO[self.size]
 
+    # OLMo uses ~4M tokens per step (batch_size * seq_len ≈ 4,194,304)
+    TOKENS_PER_STEP = 4_194_304
+
     def _get_revision(self, step: int) -> str:
         """Get the revision string for a given step."""
         # OLMo uses format like 'step1000-tokens4B'
-        # Tokens = step * 4096 (batch size) * 2048 (seq len) / 1e9
-        # Simplified: approximately step * 0.004B tokens
-        tokens_b = int(step * 4096 * 2048 / 1e9)
+        tokens_b = self.step_to_tokens(step) // 1_000_000_000
         return f"step{step}-tokens{tokens_b}B"
+
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a training step to tokens seen.
+
+        OLMo uses approximately 4M tokens per step.
+
+        Args:
+            step: Training step number.
+
+        Returns:
+            Number of tokens seen at this step.
+        """
+        return step * self.TOKENS_PER_STEP
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert tokens to nearest training step.
+
+        Args:
+            tokens: Number of tokens.
+
+        Returns:
+            Nearest available training step.
+        """
+        target_step = tokens // self.TOKENS_PER_STEP
+        # Round to nearest 1000 (OLMo checkpoints are at 1000-step intervals)
+        target_step = round(target_step / 1000) * 1000
+        return max(1000, target_step)  # Minimum step is 1000
 
     @property
     def checkpoints(self) -> List[Dict[str, int]]:
