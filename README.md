@@ -80,20 +80,42 @@ for chunk in checkpoints.split(N):
     chunks.append(chunk)
 ```
 
-### Dealing with limited disk space
-In case you don't want the checkpoints to fill up your disk space, use `clean_cache=True` to delete earlier checkpoints when iterating over these models (NB: You have to redownload these if you run it again!):
+### Cache management
+Control how checkpoints are cached using `cache_policy`:
+
 ```python
 from lm_checkpoints import PythiaCheckpoints
 
-for ckpt in PythiaCheckpoints(size="14m", clean_cache=True):
-    # Do something with ckpt.model or ckpt.tokenizer
+# "keep" (default): Standard HF caching, keep all downloads
+for ckpt in PythiaCheckpoints(size="14m", cache_policy="keep"):
+    ...
+
+# "previous": Delete previous checkpoint after loading next one
+for ckpt in PythiaCheckpoints(size="14m", cache_policy="previous"):
+    ...
+
+# "bounded": Prune oldest models when cache exceeds limit
+for ckpt in PythiaCheckpoints(size="1.4b", cache_policy="bounded", max_cache_size_gb=50.0):
+    ...
+
+# "temporary": Use a temporary cache directory, deleted when done
+for ckpt in PythiaCheckpoints(size="14m", cache_policy="temporary"):
+    ...
 ```
 
-You can also set a maximum cache size limit. When the HuggingFace cache exceeds this limit, the oldest cached models are automatically deleted:
+#### Custom cache directory
+Isolate checkpoints in a project-specific location:
 ```python
-# Automatically clean cache when it exceeds 50GB
-for ckpt in PythiaCheckpoints(size="1.4b", max_cache_size_gb=50.0):
-    # Process checkpoint...
+ckpts = PythiaCheckpoints(
+    size="14m",
+    cache_dir="/scratch/$USER/hf-lm-checkpoints"
+)
+```
+
+#### Offline mode
+Use `local_files_only=True` to only load from local cache (no downloads):
+```python
+ckpts = PythiaCheckpoints(size="14m", local_files_only=True)
 ```
 
 ### Applying evaluation functions

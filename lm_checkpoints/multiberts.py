@@ -138,14 +138,26 @@ class MultiBERTCheckpoints(AbstractCheckpoints):
 
     def get_checkpoint(self, seed, step) -> Checkpoint:
         model_name = self.get_model_name(step, seed)
-        config = AutoConfig.from_pretrained(model_name)
+        cache_dir = self._get_effective_cache_dir()
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        config = AutoConfig.from_pretrained(
+            model_name,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
+        )
+
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
+        )
 
         model = AutoModelForMaskedLM.from_pretrained(
             model_name,
             config=config,
-            low_cpu_mem_usage=self.low_cpu_mem_usage,  # https://huggingface.co/docs/transformers/main_classes/model#large-model-loading
+            low_cpu_mem_usage=self.low_cpu_mem_usage,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
         model.eval()
         model = model.to(self.device)

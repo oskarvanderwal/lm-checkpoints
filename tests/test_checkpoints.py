@@ -610,40 +610,87 @@ def test__openmoe_base_step_to_tokens():
 # =============================================================================
 
 
-def test__max_cache_size_parameter():
-    """Test that max_cache_size_gb parameter is accepted."""
-    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], max_cache_size_gb=50.0)
+def test__cache_policy_default():
+    """Test that cache_policy defaults to 'keep'."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
+    assert ckpts.cache_policy == "keep"
+
+
+def test__cache_policy_previous():
+    """Test cache_policy='previous' is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="previous")
+    assert ckpts.cache_policy == "previous"
+
+
+def test__cache_policy_bounded():
+    """Test cache_policy='bounded' requires max_cache_size_gb."""
+    ckpts = PythiaCheckpoints(
+        size="14m", step=[0], seed=[0],
+        cache_policy="bounded", max_cache_size_gb=50.0
+    )
+    assert ckpts.cache_policy == "bounded"
     assert ckpts.max_cache_size_gb == 50.0
 
 
-def test__max_cache_size_default_none():
-    """Test that max_cache_size_gb defaults to None."""
+def test__cache_policy_bounded_requires_max_size():
+    """Test that cache_policy='bounded' raises error without max_cache_size_gb."""
+    with pytest.raises(ValueError, match="max_cache_size_gb is required"):
+        PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="bounded")
+
+
+def test__cache_policy_temporary():
+    """Test cache_policy='temporary' is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="temporary")
+    assert ckpts.cache_policy == "temporary"
+
+
+def test__cache_policy_invalid():
+    """Test that invalid cache_policy raises ValueError."""
+    with pytest.raises(ValueError, match="Invalid cache_policy"):
+        PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="invalid")
+
+
+def test__cache_dir_parameter():
+    """Test that cache_dir parameter is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_dir="/tmp/test-cache")
+    assert ckpts.cache_dir == "/tmp/test-cache"
+
+
+def test__cache_dir_default_none():
+    """Test that cache_dir defaults to None (use HF default)."""
     ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
-    assert ckpts.max_cache_size_gb is None
+    assert ckpts.cache_dir is None
+
+
+def test__local_files_only_parameter():
+    """Test that local_files_only parameter is accepted."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], local_files_only=True)
+    assert ckpts.local_files_only is True
+
+
+def test__local_files_only_default_false():
+    """Test that local_files_only defaults to False."""
+    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
+    assert ckpts.local_files_only is False
+
+
+def test__clean_cache_deprecated():
+    """Test that clean_cache shows deprecation warning and sets cache_policy."""
+    import warnings
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], clean_cache=True)
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "deprecated" in str(w[0].message).lower()
+        assert ckpts.cache_policy == "previous"
 
 
 def test__get_cache_size_gb():
-    """Test that get_cache_size_gb returns a float (or raises CacheNotFound if no cache)."""
-    from huggingface_hub.errors import CacheNotFound
-    try:
-        cache_size = AbstractCheckpoints.get_cache_size_gb()
-        assert isinstance(cache_size, float)
-        assert cache_size >= 0
-    except CacheNotFound:
-        # No HuggingFace cache exists yet, which is fine
-        pass
-
-
-def test__clean_cache_parameter():
-    """Test that clean_cache parameter is accepted."""
-    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], clean_cache=True)
-    assert ckpts.clean_cache is True
-
-
-def test__clean_cache_default_false():
-    """Test that clean_cache defaults to False."""
-    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0])
-    assert ckpts.clean_cache is False
+    """Test that get_cache_size_gb returns a float."""
+    cache_size = AbstractCheckpoints.get_cache_size_gb()
+    assert isinstance(cache_size, float)
+    assert cache_size >= 0
 
 
 # =============================================================================

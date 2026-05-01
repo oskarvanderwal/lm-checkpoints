@@ -119,11 +119,14 @@ class OLMoCheckpoints(AbstractCheckpoints):
     def get_checkpoint(self, step) -> Checkpoint:
         model_name = self.get_model_name()
         revision = self._get_revision(step)
+        cache_dir = self._get_effective_cache_dir()
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             revision=revision,
             trust_remote_code=True,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
 
         model = AutoModelForCausalLM.from_pretrained(
@@ -131,6 +134,8 @@ class OLMoCheckpoints(AbstractCheckpoints):
             revision=revision,
             low_cpu_mem_usage=self.low_cpu_mem_usage,
             trust_remote_code=True,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
         model.eval()
         model = model.to(self.device)

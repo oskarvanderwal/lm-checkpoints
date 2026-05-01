@@ -130,20 +130,27 @@ class PythiaCheckpoints(AbstractCheckpoints):
 
     def get_checkpoint(self, seed, step) -> Checkpoint:
         model_name = self.get_model_name(seed)
+        revision = f"step{step}"
+        cache_dir = self._get_effective_cache_dir()
+
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
-            revision=f"step{step}",
+            revision=revision,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
 
         model = GPTNeoXForCausalLM.from_pretrained(
             model_name,
-            revision=f"step{step}",
+            revision=revision,
             low_cpu_mem_usage=self.low_cpu_mem_usage,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
         model.eval()
         model = model.to(self.device)
 
-        commit_hash = self.get_revision_hash(model_name, f"step{step}")
+        commit_hash = self.get_revision_hash(model_name, revision)
 
         return Checkpoint(
             model,
@@ -152,5 +159,5 @@ class PythiaCheckpoints(AbstractCheckpoints):
             seed=seed,
             step=step,
             commit_hash=commit_hash,
-            revision=f"step{step}",
+            revision=revision,
         )

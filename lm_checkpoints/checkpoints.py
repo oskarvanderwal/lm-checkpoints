@@ -1,8 +1,13 @@
 from abc import ABC, abstractmethod
+import tempfile
 import torch
 import numpy as np
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Literal, Optional
 from huggingface_hub import scan_cache_dir
+from huggingface_hub.errors import CacheNotFound
+
+
+CachePolicy = Literal["keep", "previous", "bounded", "temporary"]
 
 
 def records_to_list(list_of_dicts: Union[List[Dict[str, int]], Dict[str, int]]):
@@ -52,16 +57,27 @@ class AbstractCheckpoints(ABC):
     def __init__(
         self,
         device: str = "cpu",
+        cache_dir: Optional[str] = None,
+        cache_policy: CachePolicy = "keep",
+        max_cache_size_gb: Optional[float] = None,
+        local_files_only: bool = False,
+        # Deprecated parameters (kept for backwards compatibility)
         clean_cache: bool = False,
-        max_cache_size_gb: float = None,
     ):
         """Initialize checkpoints iterator.
 
         Args:
             device: Device to load models on ('cpu', 'cuda', 'mps').
-            clean_cache: If True, delete previous checkpoint after loading next one.
-            max_cache_size_gb: If set, delete oldest cached models when HuggingFace
-                cache exceeds this size (in GB). Checked before each checkpoint load.
+            cache_dir: Custom HuggingFace cache directory. If None, uses default HF cache.
+                Useful for isolating checkpoints in a project-specific location.
+            cache_policy: How to manage cached checkpoints:
+                - "keep": Default HF behavior, keep all downloaded checkpoints.
+                - "previous": Delete previous checkpoint after loading next one.
+                - "bounded": Prune oldest cached models when cache exceeds max_cache_size_gb.
+                - "temporary": Use a temporary cache directory, deleted when iteration ends.
+            max_cache_size_gb: Maximum cache size in GB (only used with cache_policy="bounded").
+            local_files_only: If True, only load from local cache (no downloads).
+            clean_cache: Deprecated, use cache_policy="previous" instead.
         """
         self.low_cpu_mem_usage = True if device == "cpu" else False
 
@@ -75,29 +91,78 @@ class AbstractCheckpoints(ABC):
         else:
             raise ValueError(f"Invalid device: {device}. Must be one of: 'cpu', 'cuda', 'mps'")
 
-        self.clean_cache = clean_cache
-        self.max_cache_size_gb = max_cache_size_gb
+        # Handle deprecated clean_cache parameter
+        if clean_cache:
+            import warnings
+            warnings.warn(
+                "clean_cache is deprecated, use cache_policy='previous' instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            cache_policy = "previous"
 
-    @staticmethod
-    def get_revision_hash(name: str, revision: str) -> str:
-        """Returns the commit hash for the model and revision (e.g., step) combination"""
-        for x in iter(scan_cache_dir().repos):
-            if x.repo_id == name:
-                return x.refs[revision].commit_hash
+        if cache_policy not in ("keep", "previous", "bounded", "temporary"):
+            raise ValueError(
+                f"Invalid cache_policy: {cache_policy}. "
+                "Must be one of: 'keep', 'previous', 'bounded', 'temporary'"
+            )
+
+        if cache_policy == "bounded" and max_cache_size_gb is None:
+            raise ValueError("max_cache_size_gb is required when cache_policy='bounded'")
+
+        self.cache_dir = cache_dir
+        self.cache_policy = cache_policy
+        self.max_cache_size_gb = max_cache_size_gb
+        self.local_files_only = local_files_only
+        self._temp_cache_dir = None
+
+    def get_revision_hash(self, name: str, revision: str) -> Optional[str]:
+        """Returns the commit hash for the model and revision (e.g., step) combination."""
+        try:
+            cache_info = scan_cache_dir(cache_dir=self.cache_dir)
+            for repo in cache_info.repos:
+                if repo.repo_id == name and revision in repo.refs:
+                    return repo.refs[revision].commit_hash
+        except CacheNotFound:
+            pass
         return None
 
     @staticmethod
-    def get_cache_size_gb() -> float:
-        """Get the current HuggingFace cache size in GB."""
-        cache_info = scan_cache_dir()
-        return cache_info.size_on_disk / (1024**3)
+    def get_cache_size_gb(cache_dir: Optional[str] = None) -> float:
+        """Get the current HuggingFace cache size in GB.
+
+        Args:
+            cache_dir: Optional custom cache directory. If None, uses default HF cache.
+
+        Returns:
+            Cache size in GB, or 0.0 if cache doesn't exist.
+        """
+        try:
+            cache_info = scan_cache_dir(cache_dir=cache_dir)
+            return cache_info.size_on_disk / (1024**3)
+        except CacheNotFound:
+            return 0.0
+
+    def _get_effective_cache_dir(self) -> Optional[str]:
+        """Get the effective cache directory, creating temp dir if needed."""
+        if self.cache_policy == "temporary" and self._temp_cache_dir is None:
+            self._temp_cache_dir = tempfile.TemporaryDirectory()
+        if self._temp_cache_dir is not None:
+            return self._temp_cache_dir.name
+        return self.cache_dir
 
     def _enforce_cache_limit(self) -> None:
         """Delete oldest cached revisions if cache exceeds max_cache_size_gb."""
-        if self.max_cache_size_gb is None:
+        if self.cache_policy != "bounded" or self.max_cache_size_gb is None:
             return
 
-        cache_info = scan_cache_dir()
+        effective_cache_dir = self._get_effective_cache_dir()
+
+        try:
+            cache_info = scan_cache_dir(cache_dir=effective_cache_dir)
+        except CacheNotFound:
+            return
+
         current_size_gb = cache_info.size_on_disk / (1024**3)
 
         if current_size_gb <= self.max_cache_size_gb:
@@ -113,6 +178,7 @@ class AbstractCheckpoints(ABC):
         revisions.sort(key=lambda x: x[0])
 
         # Delete oldest revisions until under limit
+        deleted_count = 0
         for last_accessed, commit_hash, size in revisions:
             if current_size_gb <= self.max_cache_size_gb:
                 break
@@ -120,8 +186,33 @@ class AbstractCheckpoints(ABC):
                 delete_strategy = cache_info.delete_revisions(commit_hash)
                 delete_strategy.execute()
                 current_size_gb -= size / (1024**3)
+                deleted_count += 1
             except Exception:
                 pass  # Skip if revision can't be deleted
+
+    def _delete_revision(self, commit_hash: str) -> bool:
+        """Delete a specific revision from the cache.
+
+        Args:
+            commit_hash: The commit hash to delete.
+
+        Returns:
+            True if deletion succeeded, False otherwise.
+        """
+        effective_cache_dir = self._get_effective_cache_dir()
+        try:
+            cache_info = scan_cache_dir(cache_dir=effective_cache_dir)
+            delete_strategy = cache_info.delete_revisions(commit_hash)
+            delete_strategy.execute()
+            return True
+        except (CacheNotFound, Exception):
+            return False
+
+    def _cleanup_temp_cache(self) -> None:
+        """Clean up temporary cache directory if used."""
+        if self._temp_cache_dir is not None:
+            self._temp_cache_dir.cleanup()
+            self._temp_cache_dir = None
 
     def split(self, n):
         """Convenience function for splitting checkpoints for e.g. parallel computing.
@@ -196,27 +287,32 @@ class AbstractCheckpoints(ABC):
         return ckpt
 
     def __iter__(self):
-        delete_hash = []
-        for cfg in self.checkpoints:
-            # Enforce cache size limit before loading
-            self._enforce_cache_limit()
+        delete_hashes = []
+        try:
+            for cfg in self.checkpoints:
+                # Enforce cache size limit before loading (for "bounded" policy)
+                if self.cache_policy == "bounded":
+                    self._enforce_cache_limit()
 
-            # Clean previous checkpoint if clean_cache is enabled
-            if self.clean_cache and len(delete_hash) > 0:
-                for commit_hash in delete_hash:
-                    cache_info = scan_cache_dir()
-                    delete_strategy = cache_info.delete_revisions(commit_hash)
-                    delete_strategy.execute()
-                delete_hash.clear()
+                # Delete previous checkpoint (for "previous" policy)
+                if self.cache_policy == "previous" and delete_hashes:
+                    for commit_hash in delete_hashes:
+                        self._delete_revision(commit_hash)
+                    delete_hashes.clear()
 
-            ckpt = self.get_checkpoint(**cfg)
+                ckpt = self.get_checkpoint(**cfg)
 
-            # Add commit_hash to be deleted if self.clean_cache strategy
-            if "commit_hash" in ckpt.config:
-                commit_hash = ckpt.config["commit_hash"]
-                if commit_hash:
-                    delete_hash.append(commit_hash)
-            yield ckpt
+                # Track commit_hash for deletion in "previous" policy
+                if self.cache_policy == "previous":
+                    commit_hash = ckpt.config.get("commit_hash")
+                    if commit_hash:
+                        delete_hashes.append(commit_hash)
+
+                yield ckpt
+        finally:
+            # Clean up temporary cache directory if used
+            if self.cache_policy == "temporary":
+                self._cleanup_temp_cache()
 
     def map(self, fn, include_config: bool = False):
         """Apply a function to each checkpoint.

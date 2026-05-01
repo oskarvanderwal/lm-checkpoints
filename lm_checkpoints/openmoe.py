@@ -117,16 +117,21 @@ class OpenMoECheckpoints(AbstractCheckpoints):
 
     def get_checkpoint(self, step) -> Checkpoint:
         model_name = self.get_model_name(step)
+        cache_dir = self._get_effective_cache_dir()
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             trust_remote_code=True,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
 
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             low_cpu_mem_usage=self.low_cpu_mem_usage,
             trust_remote_code=True,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
         model.eval()
         model = model.to(self.device)
