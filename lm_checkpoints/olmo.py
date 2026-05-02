@@ -1,4 +1,5 @@
 from lm_checkpoints import AbstractCheckpoints, Checkpoint
+from lm_checkpoints.utils import nearest_step_with_interval
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from typing import List, Dict
 
@@ -96,21 +97,14 @@ class OLMoCheckpoints(AbstractCheckpoints):
         return step * self.TOKENS_PER_STEP
 
     def tokens_to_step(self, tokens: int) -> int:
-        """Convert tokens to nearest available training step.
-
-        Args:
-            tokens: Number of tokens.
-
-        Returns:
-            Nearest available training step, clamped to valid range.
-        """
-        target_step = tokens // self.TOKENS_PER_STEP
-        # Round to nearest 1000 (OLMo checkpoints are at 1000-step intervals)
-        target_step = round(target_step / 1000) * 1000
-        # Clamp to available step range
-        min_step = min(self._steps)
-        max_step = max(self._steps)
-        return max(min_step, min(target_step, max_step))
+        """Convert tokens to nearest available training step."""
+        return nearest_step_with_interval(
+            tokens,
+            self.TOKENS_PER_STEP,
+            min_step=min(self._steps),
+            max_step=max(self._steps),
+            interval=1000,
+        )
 
     @property
     def checkpoints(self) -> List[Dict[str, int]]:

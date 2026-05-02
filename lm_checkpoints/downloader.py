@@ -1,71 +1,63 @@
+"""Download checkpoints from the HuggingFace hub."""
+
 import argparse
-from lm_checkpoints import (
-    PythiaCheckpoints,
-    MultiBERTCheckpoints,
-    OLMoCheckpoints,
-    TriCheckpoints,
-    OpenMoECheckpoints,
-)
 from huggingface_hub import snapshot_download
+
+from lm_checkpoints.pythia import PythiaCheckpoints
+from lm_checkpoints.multiberts import MultiBERTCheckpoints
+from lm_checkpoints.olmo import OLMoCheckpoints
+from lm_checkpoints.tri import TriCheckpoints
+from lm_checkpoints.openmoe import OpenMoECheckpoints
+
+CHECKPOINT_REGISTRY = {
+    "pythia": PythiaCheckpoints,
+    "multiberts": MultiBERTCheckpoints,
+    "olmo": OLMoCheckpoints,
+    "tri": TriCheckpoints,
+    "openmoe": OpenMoECheckpoints,
+}
+MODELS_REQUIRING_SIZE = {"pythia", "olmo", "tri", "openmoe"}
+
+
+def _get_download_info(checkpoints, model_type: str, cfg: dict) -> tuple:
+    """Get repo_id and revision for a checkpoint config."""
+    if model_type == "pythia":
+        return checkpoints.get_model_name(cfg["seed"]), f"step{cfg['step']}"
+    elif model_type == "multiberts":
+        return checkpoints.get_model_name(cfg["step"], cfg["seed"]), None
+    elif model_type in ("olmo", "tri"):
+        return checkpoints.get_model_name(), checkpoints._get_revision(cfg["step"])
+    elif model_type == "openmoe":
+        return checkpoints.get_model_name(cfg["step"]), None
+    return None, None
 
 
 def main():
     parser = argparse.ArgumentParser(description="Download checkpoints from the HuggingFace hub.")
-    parser.add_argument(
-        "checkpoints",
-        type=str,
-        choices=["pythia", "multiberts", "olmo", "tri", "openmoe"],
-        help="Checkpoints to download",
-    )
-    parser.add_argument("--seed", type=int, nargs="+", help="Selection of seeds for the checkpoints. Defaults to all.")
-    parser.add_argument("--step", type=int, nargs="+", help="Selection of steps for the checkpoints. Defaults to all.")
-    parser.add_argument("--size", type=str, help="Size of the checkpoints model. Required for some models.")
-    parser.add_argument("--cache_dir", type=str, help="Custom cache directory.")
+    parser.add_argument("checkpoints", type=str, choices=list(CHECKPOINT_REGISTRY.keys()))
+    parser.add_argument("--seed", type=int, nargs="+")
+    parser.add_argument("--step", type=int, nargs="+")
+    parser.add_argument("--size", type=str)
+    parser.add_argument("--cache_dir", type=str)
     args = parser.parse_args()
 
-    cache_kwargs = {}
-    if args.cache_dir:
-        cache_kwargs["cache_dir"] = args.cache_dir
+    if args.checkpoints in MODELS_REQUIRING_SIZE and not args.size:
+        raise ValueError(f"--size is required for {args.checkpoints}")
 
-    if args.checkpoints == "multiberts":
-        checkpoints = MultiBERTCheckpoints(seed=args.seed, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "pythia":
-        if not args.size:
-            raise ValueError("Please provide the model size of the Pythia models, e.g., `--size 70m`.")
-        checkpoints = PythiaCheckpoints(size=args.size, seed=args.seed, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "olmo":
-        if not args.size:
-            raise ValueError("Please provide the model size of OLMo models, e.g., `--size 7b`.")
-        checkpoints = OLMoCheckpoints(size=args.size, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "tri":
-        if not args.size:
-            raise ValueError("Please provide the model size of Tri models, e.g., `--size 7b`.")
-        checkpoints = TriCheckpoints(size=args.size, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "openmoe":
-        if not args.size:
-            raise ValueError("Please provide the model size of OpenMoE models, e.g., `--size 8b`.")
-        checkpoints = OpenMoECheckpoints(size=args.size, step=args.step, **cache_kwargs)
+    cls = CHECKPOINT_REGISTRY[args.checkpoints]
+    kwargs = {}
+    if args.cache_dir:
+        kwargs["cache_dir"] = args.cache_dir
+    if args.step:
+        kwargs["step"] = args.step
+    if args.seed:
+        kwargs["seed"] = args.seed
+    if args.size:
+        kwargs["size"] = args.size
+
+    checkpoints = cls(**kwargs)
 
     for cfg in checkpoints.checkpoints:
-        if args.checkpoints == "pythia":
-            repo_id = checkpoints.get_model_name(cfg["seed"])
-            revision = f"step{cfg['step']}"
-        elif args.checkpoints == "multiberts":
-            repo_id = checkpoints.get_model_name(cfg["step"], cfg["seed"])
-            revision = None
-        elif args.checkpoints == "olmo":
-            repo_id = checkpoints.get_model_name()
-            revision = checkpoints._get_revision(cfg["step"])
-        elif args.checkpoints == "tri":
-            repo_id = checkpoints.get_model_name()
-            revision = checkpoints._get_revision(cfg["step"])
-        elif args.checkpoints == "openmoe":
-            repo_id = checkpoints.get_model_name(cfg["step"])
-            revision = None
-
+        repo_id, revision = _get_download_info(checkpoints, args.checkpoints, cfg)
         print(f"Downloading {repo_id}" + (f" @ {revision}" if revision else ""))
-        snapshot_download(
-            repo_id=repo_id,
-            revision=revision,
-            cache_dir=args.cache_dir,
-        )
+        snapshot_download(repo_id=repo_id, revision=revision, cache_dir=args.cache_dir)

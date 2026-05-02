@@ -1,33 +1,39 @@
-"""Functionality for evaluating the checkpoints on multiple tasks using lm-evaluation-harness.
-Borrowed most of the implementation from https://github.com/EleutherAI/lm-evaluation-harness/blob/3196e907fa195b684470a913c7235ed7f08a4383/lm_eval/__main__.py
-"""
+"""Evaluate checkpoints on multiple tasks using lm-evaluation-harness."""
 
 from importlib.util import find_spec
 from pathlib import Path
 import json
-from lm_checkpoints import (
-    AbstractCheckpoints,
-    PythiaCheckpoints,
-    MultiBERTCheckpoints,
-    OLMoCheckpoints,
-    TriCheckpoints,
-    OpenMoECheckpoints,
-)
-import numpy as np
-from typing import List
 import os
 import argparse
+from typing import List
+
+import numpy as np
+
+from lm_checkpoints.checkpoints import AbstractCheckpoints
+from lm_checkpoints.pythia import PythiaCheckpoints
+from lm_checkpoints.multiberts import MultiBERTCheckpoints
+from lm_checkpoints.olmo import OLMoCheckpoints
+from lm_checkpoints.tri import TriCheckpoints
+from lm_checkpoints.openmoe import OpenMoECheckpoints
+
+CHECKPOINT_REGISTRY = {
+    "pythia": PythiaCheckpoints,
+    "multiberts": MultiBERTCheckpoints,
+    "olmo": OLMoCheckpoints,
+    "tri": TriCheckpoints,
+    "openmoe": OpenMoECheckpoints,
+}
+MODELS_REQUIRING_SIZE = {"pythia", "olmo", "tri", "openmoe"}
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def _handle_non_serializable(o):
-    if isinstance(o, np.int64) or isinstance(o, np.int32):
+    if isinstance(o, (np.int64, np.int32)):
         return int(o)
     elif isinstance(o, set):
         return list(o)
-    else:
-        return str(o)
+    return str(o)
 
 
 def evaluate(
@@ -40,34 +46,17 @@ def evaluate(
     overwrite: bool = False,
     **kwargs,
 ) -> None:
-    """Uses lm-evaluation-harness for evaluating all of the checkpoints on the tasks, and writes the results to disk.
-    `kwargs` are passed to `lm_eval.simple_evaluate`.
-
-    Args:
-        checkpoints (AbstractCheckpoints): The checkpoints to evaluate.
-        tasks (List): List of tasks implemented in lm-evaluation-harness.
-        output_dir (str): Directory where the results will be written to.
-        batch_size (int, optional): batch size lm-evaluation-harness should use. Defaults to 16.
-        log_samples (bool, optional): If True, will also write the model's answers to the individual test items. Defaults to False.
-        skip_if_exists (bool, optional): If True, skips evaluating the checkpoints for which the results that already exist on disk. Defaults to True.
-        overwrite (bool, optional): If True, overwrites the results on disk. Defaults to False.
-
-    Raises:
-        Exception: Raised if lm-evaluation-harness is not installed.
-        FileExistsError: Raised if the results files already exists, and both the flags `skip_if_exists` and `overwrite` are False.
-    """
-    # https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md
+    """Evaluate checkpoints using lm-evaluation-harness."""
     if not find_spec("lm_eval"):
-        raise Exception(
-            'Please install lm_eval through `pip install "lm-checkpoints[eval]"` or `pip install -e .[eval]`'
+        raise ImportError(
+            'Please install lm_eval: pip install "lm-checkpoints[eval]"'
         )
-    else:
-        import lm_eval
-        from lm_eval.models.huggingface import HFLM
+
+    import lm_eval
+    from lm_eval.models.huggingface import HFLM
 
     device = checkpoints.device
     checkpoints.low_cpu_mem_usage = False
-
     output_dir = Path(output_dir)
 
     for ckpt in checkpoints:
@@ -83,6 +72,7 @@ def evaluate(
                 continue
             elif not overwrite:
                 raise FileExistsError(f"File already exists at {path}")
+
         path.parent.mkdir(parents=True, exist_ok=True)
 
         results = lm_eval.simple_evaluate(
@@ -91,84 +81,68 @@ def evaluate(
             batch_size=batch_size,
             device=device,
             **kwargs,
-            # task_manager=lm_eval.tasks.TaskManager(),
         )
 
         if results is not None:
-            if log_samples:
-                samples = results.pop("samples")
+            samples = results.pop("samples") if log_samples else None
             dumped = json.dumps(results, indent=2, default=_handle_non_serializable, ensure_ascii=False)
             path.write_text(dumped, encoding="utf-8")
 
-            if log_samples:
-                for task_name, config in results["configs"].items():
-                    output_samples_file = path.parent / f"samples_{task_name}"
+            if log_samples and samples:
+                for task_name in results["configs"]:
+                    output_file = path.parent / f"samples_{task_name}.json"
                     samples_dumped = json.dumps(
                         samples[task_name],
                         indent=2,
                         default=_handle_non_serializable,
                         ensure_ascii=False,
                     )
-                    output_samples_file.with_suffix(".json").write_text(samples_dumped, encoding="utf-8")
+                    output_file.write_text(samples_dumped, encoding="utf-8")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Evaluate checkpoints using lm-evaluation-harness.")
-    parser.add_argument(
-        "checkpoints",
-        type=str,
-        choices=["pythia", "multiberts", "olmo", "tri", "openmoe"],
-        help="Checkpoints to evaluate",
-    )
-    parser.add_argument("--device", type=str, choices=["cpu", "cuda", "mps"], default="cpu")
-    parser.add_argument("--output", type=str, required=True, help="Path to directory where to store results.")
-    parser.add_argument("--seed", type=int, nargs="+", help="Selection of seeds for the checkpoints. Defaults to all.")
-    parser.add_argument("--step", type=int, nargs="+", help="Selection of steps for the checkpoints. Defaults to all.")
-    parser.add_argument("--size", type=str, help="Size of the checkpoints model. Required for some models.")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size.")
-    parser.add_argument("--tasks", type=str, nargs="+", help="List of tasks to evaluate.")
-    parser.add_argument("--log_samples", action="store_true")
-    parser.add_argument("--skip_if_exists", action="store_true")
-    parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument(
-        "--cache_policy",
-        type=str,
-        choices=["keep", "previous", "bounded", "temporary"],
-        default="keep",
-        help="Cache management policy.",
-    )
-    parser.add_argument("--max_cache_size_gb", type=float, help="Max cache size in GB (for cache_policy=bounded).")
-    parser.add_argument("--cache_dir", type=str, help="Custom cache directory.")
+def _create_checkpoints(args):
+    """Create checkpoint instance from CLI args using registry."""
+    cls = CHECKPOINT_REGISTRY[args.checkpoints]
 
-    args = parser.parse_args()
+    if args.checkpoints in MODELS_REQUIRING_SIZE and not args.size:
+        raise ValueError(f"--size is required for {args.checkpoints}")
 
-    # Common cache kwargs
-    cache_kwargs = {
+    kwargs = {
         "device": args.device,
         "cache_policy": args.cache_policy,
         "cache_dir": args.cache_dir,
     }
     if args.max_cache_size_gb:
-        cache_kwargs["max_cache_size_gb"] = args.max_cache_size_gb
+        kwargs["max_cache_size_gb"] = args.max_cache_size_gb
+    if args.step:
+        kwargs["step"] = args.step
+    if args.seed:
+        kwargs["seed"] = args.seed
+    if args.size:
+        kwargs["size"] = args.size
 
-    if args.checkpoints == "multiberts":
-        checkpoints = MultiBERTCheckpoints(seed=args.seed, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "pythia":
-        if not args.size:
-            raise ValueError("Please provide the model size of the Pythia models to evaluate, e.g., `--size 70m`.")
-        checkpoints = PythiaCheckpoints(size=args.size, seed=args.seed, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "olmo":
-        if not args.size:
-            raise ValueError("Please provide the model size of OLMo models to evaluate, e.g., `--size 7b`.")
-        checkpoints = OLMoCheckpoints(size=args.size, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "tri":
-        if not args.size:
-            raise ValueError("Please provide the model size of Tri models to evaluate, e.g., `--size 7b`.")
-        checkpoints = TriCheckpoints(size=args.size, step=args.step, **cache_kwargs)
-    elif args.checkpoints == "openmoe":
-        if not args.size:
-            raise ValueError("Please provide the model size of OpenMoE models to evaluate, e.g., `--size 8b`.")
-        checkpoints = OpenMoECheckpoints(size=args.size, step=args.step, **cache_kwargs)
+    return cls(**kwargs)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Evaluate checkpoints using lm-evaluation-harness.")
+    parser.add_argument("checkpoints", type=str, choices=list(CHECKPOINT_REGISTRY.keys()))
+    parser.add_argument("--device", type=str, choices=["cpu", "cuda", "mps"], default="cpu")
+    parser.add_argument("--output", type=str, required=True)
+    parser.add_argument("--seed", type=int, nargs="+")
+    parser.add_argument("--step", type=int, nargs="+")
+    parser.add_argument("--size", type=str)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--tasks", type=str, nargs="+", required=True)
+    parser.add_argument("--log_samples", action="store_true")
+    parser.add_argument("--skip_if_exists", action="store_true")
+    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--cache_policy", type=str, choices=["keep", "previous", "bounded"], default="keep")
+    parser.add_argument("--max_cache_size_gb", type=float)
+    parser.add_argument("--cache_dir", type=str)
+
+    args = parser.parse_args()
+    checkpoints = _create_checkpoints(args)
 
     evaluate(
         checkpoints,

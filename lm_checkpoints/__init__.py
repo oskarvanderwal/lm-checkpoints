@@ -4,6 +4,7 @@ from .multiberts import MultiBERTCheckpoints
 from .olmo import OLMoCheckpoints
 from .tri import TriCheckpoints
 from .openmoe import OpenMoECheckpoints
+from .cache import CacheManager, CachePolicy
 from .evaluator import evaluate
 
 __all__ = [
@@ -14,5 +15,7 @@ __all__ = [
     "OLMoCheckpoints",
     "TriCheckpoints",
     "OpenMoECheckpoints",
+    "CacheManager",
+    "CachePolicy",
     "evaluate",
 ]

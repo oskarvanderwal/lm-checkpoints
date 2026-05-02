@@ -97,10 +97,6 @@ for ckpt in PythiaCheckpoints(size="14m", cache_policy="previous"):
 # "bounded": Prune oldest models when cache exceeds limit
 for ckpt in PythiaCheckpoints(size="1.4b", cache_policy="bounded", max_cache_size_gb=50.0):
     ...
-
-# "temporary": Use a temporary cache directory, deleted when done
-for ckpt in PythiaCheckpoints(size="14m", cache_policy="temporary"):
-    ...
 ```
 
 #### Custom cache directory

@@ -1,5 +1,5 @@
 from lm_checkpoints import PythiaCheckpoints, MultiBERTCheckpoints, Checkpoint, AbstractCheckpoints
-from lm_checkpoints.checkpoints import records_to_list, chunk
+from lm_checkpoints.utils import records_to_list, chunk
 from lm_checkpoints.testing import multi_device
 import pytest
 import torch
@@ -82,17 +82,17 @@ def test__pythia_all_valid_sizes():
 
 
 def test__pythia_invalid_size():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Invalid size"):
         PythiaCheckpoints(size="invalid", step=[0], seed=[0])
 
 
 def test__pythia_invalid_step():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Invalid steps"):
         PythiaCheckpoints(step=[99999], seed=[0])
 
 
 def test__pythia_invalid_seed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Invalid seeds"):
         PythiaCheckpoints(step=[0], seed=[99])
 
 
@@ -169,12 +169,12 @@ def test__multiberts_splits():
 
 
 def test__multiberts_invalid_step():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Invalid steps"):
         MultiBERTCheckpoints(step=[99999], seed=[0])
 
 
 def test__multiberts_invalid_seed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="Invalid seeds"):
         MultiBERTCheckpoints(step=[0], seed=[99])
 
 
@@ -643,19 +643,13 @@ def test__cache_policy_bounded():
 
 def test__cache_policy_bounded_requires_max_size():
     """Test that cache_policy='bounded' raises error without max_cache_size_gb."""
-    with pytest.raises(ValueError, match="max_cache_size_gb is required"):
+    with pytest.raises(ValueError, match="max_size_gb is required"):
         PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="bounded")
-
-
-def test__cache_policy_temporary():
-    """Test cache_policy='temporary' is accepted."""
-    ckpts = PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="temporary")
-    assert ckpts.cache_policy == "temporary"
 
 
 def test__cache_policy_invalid():
     """Test that invalid cache_policy raises ValueError."""
-    with pytest.raises(ValueError, match="Invalid cache_policy"):
+    with pytest.raises(ValueError, match="Invalid cache"):
         PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="invalid")
 
 
