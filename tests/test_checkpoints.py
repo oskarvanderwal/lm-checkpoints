@@ -631,22 +631,6 @@ def test__cache_policy_previous():
     assert ckpts.cache_policy == "previous"
 
 
-def test__cache_policy_bounded():
-    """Test cache_policy='bounded' requires max_cache_size_gb."""
-    ckpts = PythiaCheckpoints(
-        size="14m", step=[0], seed=[0],
-        cache_policy="bounded", max_cache_size_gb=50.0
-    )
-    assert ckpts.cache_policy == "bounded"
-    assert ckpts.max_cache_size_gb == 50.0
-
-
-def test__cache_policy_bounded_requires_max_size():
-    """Test that cache_policy='bounded' raises error without max_cache_size_gb."""
-    with pytest.raises(ValueError, match="max_size_gb is required"):
-        PythiaCheckpoints(size="14m", step=[0], seed=[0], cache_policy="bounded")
-
-
 def test__cache_policy_invalid():
     """Test that invalid cache_policy raises ValueError."""
     with pytest.raises(ValueError, match="Invalid cache"):

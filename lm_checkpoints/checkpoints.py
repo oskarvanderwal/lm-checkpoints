@@ -19,7 +19,6 @@ class AbstractCheckpoints(ABC):
         device: str = "cpu",
         cache_dir: Optional[str] = None,
         cache_policy: CachePolicy = "keep",
-        max_cache_size_gb: Optional[float] = None,
         local_files_only: bool = False,
     ):
         """Initialize checkpoints iterator.
@@ -30,8 +29,6 @@ class AbstractCheckpoints(ABC):
             cache_policy: How to manage cached checkpoints:
                 - "keep": Default HF behavior, keep all downloaded checkpoints.
                 - "previous": Delete previous checkpoint after loading next one.
-                - "bounded": Prune oldest cached models when cache exceeds max_cache_size_gb.
-            max_cache_size_gb: Maximum cache size in GB (only used with cache_policy="bounded").
             local_files_only: If True, only load from local cache (no downloads).
         """
         self.low_cpu_mem_usage = device == "cpu"
@@ -48,13 +45,11 @@ class AbstractCheckpoints(ABC):
 
         self.cache_dir = cache_dir
         self.cache_policy = cache_policy
-        self.max_cache_size_gb = max_cache_size_gb
         self.local_files_only = local_files_only
 
         self._cache = CacheManager(
             policy=cache_policy,
             cache_dir=cache_dir,
-            max_size_gb=max_cache_size_gb,
         )
 
     def _get_effective_cache_dir(self) -> Optional[str]:

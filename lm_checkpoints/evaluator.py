@@ -112,8 +112,6 @@ def _create_checkpoints(args):
         "cache_policy": args.cache_policy,
         "cache_dir": args.cache_dir,
     }
-    if args.max_cache_size_gb:
-        kwargs["max_cache_size_gb"] = args.max_cache_size_gb
     if args.step:
         kwargs["step"] = args.step
     if args.seed:
@@ -137,8 +135,7 @@ def main():
     parser.add_argument("--log_samples", action="store_true")
     parser.add_argument("--skip_if_exists", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument("--cache_policy", type=str, choices=["keep", "previous", "bounded"], default="keep")
-    parser.add_argument("--max_cache_size_gb", type=float)
+    parser.add_argument("--cache_policy", type=str, choices=["keep", "previous"], default="keep")
     parser.add_argument("--cache_dir", type=str)
 
     args = parser.parse_args()
