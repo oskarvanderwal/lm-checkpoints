@@ -31,10 +31,13 @@ CHECKPOINT_CLASSES = {
 }
 
 
-def evaluate_checkpoint(ckpt, tasks, output_dir):
-    """Run Inspect AI evaluation on a single checkpoint."""
-    model = HuggingFaceModel(model=ckpt.model, tokenizer=ckpt.tokenizer)
-    return eval(tasks, model=model, log_dir=str(output_dir))
+def make_evaluator(tasks, output_dir):
+    """Create an evaluation function for use with map()."""
+    def evaluate(ckpt):
+        ckpt_output = output_dir / ckpt.config["model_name"] / f"step_{ckpt.config['step']}"
+        model = HuggingFaceModel(model=ckpt.model, tokenizer=ckpt.tokenizer)
+        return eval(tasks, model=model, log_dir=str(ckpt_output))
+    return evaluate
 
 
 def main():
@@ -59,11 +62,9 @@ def main():
     checkpoints = CHECKPOINT_CLASSES[args.model](**kwargs)
     output_dir = Path(args.output)
 
-    for ckpt in checkpoints:
-        ckpt_output = output_dir / ckpt.config["model_name"] / f"step_{ckpt.config['step']}"
-        print(f"Evaluating {ckpt.config['model_name']} step {ckpt.config['step']}...")
-        evaluate_checkpoint(ckpt, args.tasks, ckpt_output)
-        print(f"Results saved to {ckpt_output}")
+    evaluator = make_evaluator(args.tasks, output_dir)
+    results = list(checkpoints.map(evaluator))
+    print(f"Completed {len(results)} evaluations")
 
 
 if __name__ == "__main__":

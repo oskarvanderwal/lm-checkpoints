@@ -32,14 +32,16 @@ CHECKPOINT_CLASSES = {
 }
 
 
-def evaluate_checkpoint(ckpt, tasks, batch_size=16, device="cpu"):
-    """Run lm-eval on a single checkpoint."""
-    return lm_eval.simple_evaluate(
-        model=HFLM(pretrained=ckpt.model, tokenizer=ckpt.tokenizer),
-        tasks=tasks,
-        batch_size=batch_size,
-        device=device,
-    )
+def make_evaluator(tasks, batch_size, device):
+    """Create an evaluation function for use with map()."""
+    def evaluate(ckpt):
+        return lm_eval.simple_evaluate(
+            model=HFLM(pretrained=ckpt.model, tokenizer=ckpt.tokenizer),
+            tasks=tasks,
+            batch_size=batch_size,
+            device=device,
+        )
+    return evaluate
 
 
 def main():
@@ -52,7 +54,6 @@ def main():
     parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"])
-    parser.add_argument("--skip_existing", action="store_true")
     args = parser.parse_args()
 
     kwargs = {"device": args.device}
@@ -66,19 +67,14 @@ def main():
     checkpoints = CHECKPOINT_CLASSES[args.model](**kwargs)
     output_dir = Path(args.output)
 
-    for ckpt in checkpoints:
-        result_path = output_dir / ckpt.config["model_name"] / f"step_{ckpt.config['step']}" / "results.json"
+    evaluator = make_evaluator(args.tasks, args.batch_size, args.device)
+    results = checkpoints.map_collect(evaluator)
 
-        if args.skip_existing and result_path.exists():
-            print(f"Skipping {result_path} (exists)")
-            continue
-
-        print(f"Evaluating {ckpt.config['model_name']} step {ckpt.config['step']}...")
-        results = evaluate_checkpoint(ckpt, args.tasks, args.batch_size, args.device)
-
+    for entry in results:
+        result_path = output_dir / entry["model_name"] / f"step_{entry['step']}" / "results.json"
         result_path.parent.mkdir(parents=True, exist_ok=True)
-        result_path.write_text(json.dumps(results, indent=2, default=str))
-        print(f"Saved to {result_path}")
+        result_path.write_text(json.dumps(entry, indent=2, default=str))
+        print(f"Saved {result_path}")
 
 
 if __name__ == "__main__":
