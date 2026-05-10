@@ -14,20 +14,11 @@ from pathlib import Path
 from inspect_ai import eval
 from inspect_ai.model import HuggingFaceModel
 
-from lm_checkpoints import (
-    PythiaCheckpoints,
-    MultiBERTCheckpoints,
-    OLMoCheckpoints,
-    TriCheckpoints,
-    OpenMoECheckpoints,
-)
+from lm_checkpoints import PythiaCheckpoints, MultiBERTCheckpoints
 
 CHECKPOINT_CLASSES = {
     "pythia": PythiaCheckpoints,
     "multiberts": MultiBERTCheckpoints,
-    "olmo": OLMoCheckpoints,
-    "tri": TriCheckpoints,
-    "openmoe": OpenMoECheckpoints,
 }
 
 

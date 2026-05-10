@@ -15,20 +15,11 @@ from pathlib import Path
 import lm_eval
 from lm_eval.models.huggingface import HFLM
 
-from lm_checkpoints import (
-    PythiaCheckpoints,
-    MultiBERTCheckpoints,
-    OLMoCheckpoints,
-    TriCheckpoints,
-    OpenMoECheckpoints,
-)
+from lm_checkpoints import PythiaCheckpoints, MultiBERTCheckpoints
 
 CHECKPOINT_CLASSES = {
     "pythia": PythiaCheckpoints,
     "multiberts": MultiBERTCheckpoints,
-    "olmo": OLMoCheckpoints,
-    "tri": TriCheckpoints,
-    "openmoe": OpenMoECheckpoints,
 }
 
 

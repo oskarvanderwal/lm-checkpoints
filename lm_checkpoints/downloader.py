@@ -5,18 +5,12 @@ from huggingface_hub import snapshot_download
 
 from lm_checkpoints.pythia import PythiaCheckpoints
 from lm_checkpoints.multiberts import MultiBERTCheckpoints
-from lm_checkpoints.olmo import OLMoCheckpoints
-from lm_checkpoints.tri import TriCheckpoints
-from lm_checkpoints.openmoe import OpenMoECheckpoints
 
 CHECKPOINT_REGISTRY = {
     "pythia": PythiaCheckpoints,
     "multiberts": MultiBERTCheckpoints,
-    "olmo": OLMoCheckpoints,
-    "tri": TriCheckpoints,
-    "openmoe": OpenMoECheckpoints,
 }
-MODELS_REQUIRING_SIZE = {"pythia", "olmo", "tri", "openmoe"}
+MODELS_REQUIRING_SIZE = {"pythia"}
 
 
 def _get_download_info(checkpoints, model_type: str, cfg: dict) -> tuple:
@@ -25,10 +19,6 @@ def _get_download_info(checkpoints, model_type: str, cfg: dict) -> tuple:
         return checkpoints.get_model_name(cfg["seed"]), f"step{cfg['step']}"
     elif model_type == "multiberts":
         return checkpoints.get_model_name(cfg["step"], cfg["seed"]), None
-    elif model_type in ("olmo", "tri"):
-        return checkpoints.get_model_name(), checkpoints._get_revision(cfg["step"])
-    elif model_type == "openmoe":
-        return checkpoints.get_model_name(cfg["step"]), None
     return None, None
 
 
