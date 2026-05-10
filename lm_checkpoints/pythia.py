@@ -1,11 +1,17 @@
 from lm_checkpoints import AbstractCheckpoints, Checkpoint
+from lm_checkpoints.utils import nearest_available_step
 from itertools import product
 from transformers import AutoTokenizer, GPTNeoXForCausalLM
 from typing import List, Dict
 
 
 class PythiaCheckpoints(AbstractCheckpoints):
-    """Class for iterating over Pythia checkpoints"""
+    """Class for iterating over Pythia checkpoints."""
+
+    _SIZES = ["14m", "31m", "70m", "160m", "410m", "1b", "1.4b", "2.8b", "6.9b", "12b"]
+    _LARGE_SIZES = ["1b", "1.4b", "2.8b", "6.9b", "12b"]
+    _ALL_STEPS = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(range(1000, 144000, 1000))
+    TOKENS_PER_STEP = 2_097_152  # batch_size=1024 * seq_len=2048
 
     def __init__(
         self,
@@ -18,37 +24,37 @@ class PythiaCheckpoints(AbstractCheckpoints):
         """Initialize the PythiaCheckpoints.
 
         Args:
-            size (str): Model size. Defaults to "14m".
-            step (List[int], optional): List of steps to consider, uses all available steps if not specified.
-            seed (List[int], optional): List of seeds to consider, uses all available seeds if not specified.
-            deduped (bool, optional): Specifies whether to use the deduped version of Pythia. Defaults to False.
+            size: Model size. Defaults to "14m".
+            step: List of steps to consider, uses all available steps if not specified.
+            seed: List of seeds to consider, uses all available seeds if not specified.
+            deduped: Use deduped version of Pythia. Defaults to False.
         """
         super().__init__(**kwargs)
 
+        if size not in self._SIZES:
+            raise ValueError(f"Invalid size: {size}. Must be one of: {self._SIZES}")
+        self.size = size
         self.deduped = deduped
 
-        self._size = ["14m", "31m", "70m", "160m", "410m", "1b", "1.4b", "2.8b", "6.9b", "12b"]
-        assert size in self._size
-        self.size = size
-
         if deduped:
-            raise NotImplementedError
+            raise NotImplementedError("Deduped Pythia checkpoints not yet supported")
 
         # Different seeds only available for the smaller models
-        if self.size in ["1b", "1.4b", "2.8b", "6.9b", "12b"]:
-            self._seeds = [0]
-        else:
-            self._seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-        
+        self._seeds = [0] if self.size in self._LARGE_SIZES else list(range(10))
+
         if seed:
-            assert set(seed).issubset(set(self._seeds))
+            invalid = set(seed) - set(self._seeds)
+            if invalid:
+                raise ValueError(f"Invalid seeds: {invalid}. Available for {size}: {self._seeds}")
             self.seeds = seed
         else:
             self.seeds = self._seeds
 
-        self._steps = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512] + list(range(1000, 144000, 1000))
+        self._steps = self._ALL_STEPS
         if step:
-            assert set(step).issubset(set(self._steps))
+            invalid = set(step) - set(self._steps)
+            if invalid:
+                raise ValueError(f"Invalid steps: {invalid}")
             self.steps = step
         else:
             self.steps = self._steps
@@ -97,23 +103,44 @@ class PythiaCheckpoints(AbstractCheckpoints):
     def __len__(self):
         return len(self.seeds) * len(self.steps)
 
+    def step_to_tokens(self, step: int) -> int:
+        """Convert a training step to tokens seen."""
+        return step * self.TOKENS_PER_STEP
+
+    def tokens_to_step(self, tokens: int) -> int:
+        """Convert tokens to nearest available training step."""
+        return nearest_available_step(tokens, self.TOKENS_PER_STEP, self._steps)
+
     def get_checkpoint(self, seed, step) -> Checkpoint:
         model_name = self.get_model_name(seed)
+        revision = f"step{step}"
+        cache_dir = self._get_effective_cache_dir()
+
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
-            revision=f"step{step}",
+            revision=revision,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
 
         model = GPTNeoXForCausalLM.from_pretrained(
             model_name,
-            revision=f"step{step}",
+            revision=revision,
             low_cpu_mem_usage=self.low_cpu_mem_usage,
+            cache_dir=cache_dir,
+            local_files_only=self.local_files_only,
         )
         model.eval()
         model = model.to(self.device)
 
-        commit_hash = self.get_revision_hash(model_name, f"step{step}")
+        commit_hash = self.get_revision_hash(model_name, revision)
 
         return Checkpoint(
-            model, tokenizer=tokenizer, model_name=model_name, seed=seed, step=step, commit_hash=commit_hash, revision=f"step{step}"
+            model,
+            tokenizer=tokenizer,
+            model_name=model_name,
+            seed=seed,
+            step=step,
+            commit_hash=commit_hash,
+            revision=revision,
         )
