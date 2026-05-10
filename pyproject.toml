@@ -13,15 +13,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-eval = ["lm-eval>=0.4.5"]
 olmo = ["ai2-olmo>=0.5.0"]  # Required for older OLMo models (1B, 7B)
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.5.0",
 ]
-
-[project.scripts]
-evaluate_checkpoints = "lm_checkpoints.evaluator:main"
 
 [tool.ruff]
 line-length = 120

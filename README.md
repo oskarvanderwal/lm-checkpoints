@@ -141,30 +141,33 @@ tokens = ckpts.step_to_tokens(1000)  # ~2.1B tokens
 # Find nearest step for a given token count
 step = ckpts.tokens_to_step(5_000_000_000)  # Returns nearest available step
 ```
-### Evaluating checkpoints using lm-evaluation-harness
-If you install lm-checkpoints with the `eval` option (`pip install "lm-checkpoints[eval]"`), you can use the `evaluate` function to run [lm-evaluation-harness]() for all checkpoints:
+### Evaluation
+Use `map()` with any evaluation framework:
+
 ```python
-from lm_checkpoints import evaluate, PythiaCheckpoints
+from lm_checkpoints import PythiaCheckpoints
 
-ckpts = PythiaCheckpoints(size="14m", step=[0, 1, 2, 4], seed=[0], device="cuda")
+ckpts = PythiaCheckpoints(size="14m", step=[0, 1000, 2000], seed=[0], device="cuda")
 
-evaluate(
-    ckpts,
-    tasks=["triviaqa", "crows_pairs_english"],
-    output_dir="test_results",
-    log_samples=True,
-    skip_if_exists=True,
-#    limit=5, # For testing purposes!
-)
+# With lm-evaluation-harness
+from lm_eval.models.huggingface import HFLM
+import lm_eval
+
+for ckpt in ckpts:
+    results = lm_eval.simple_evaluate(
+        model=HFLM(pretrained=ckpt.model, tokenizer=ckpt.tokenizer),
+        tasks=["hellaswag"],
+    )
+
+# With Inspect AI
+from inspect_ai import eval
+from inspect_ai.model import HuggingFaceModel
+
+for ckpt in ckpts:
+    eval(tasks, model=HuggingFaceModel(model=ckpt.model, tokenizer=ckpt.tokenizer))
+
+# Or any custom evaluation
+results = ckpts.map_collect(my_eval_function)
 ```
 
-Or you can use the `evaluate_checkpoints` script:
-```bash
-# Pythia
-evaluate_checkpoints pythia --output test_results --size 14m --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
-
-# OLMo
-evaluate_checkpoints olmo --output test_results --size 7b --step 1000 2000 --tasks hellaswag --device cuda
-```
-
-Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`), and if using the `--log_samples` option, a json file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.json`).
+See `examples/` for ready-to-use evaluation scripts.

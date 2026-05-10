@@ -5,7 +5,6 @@ from .olmo import OLMoCheckpoints
 from .tri import TriCheckpoints
 from .openmoe import OpenMoECheckpoints
 from .cache import CacheManager, CachePolicy
-from .evaluator import evaluate
 
 __all__ = [
     "AbstractCheckpoints",
@@ -17,5 +16,4 @@ __all__ = [
     "OpenMoECheckpoints",
     "CacheManager",
     "CachePolicy",
-    "evaluate",
 ]
