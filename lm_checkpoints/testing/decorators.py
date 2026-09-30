@@ -3,7 +3,7 @@ import pytest
 
 _available_devices = ["cpu"]
 if torch.cuda.is_available():
-    _available_devices.append("cuda:0")
+    _available_devices.append("cuda")
 if torch.backends.mps.is_available():
     _available_devices.append("mps")
 
@@ -14,7 +14,7 @@ def multi_device(test_method):
 
     Decorator that provides an argument `device` of type `str` to a test function.
 
-    If you have a CUDA capable GPU available, device will be "cuda:0", otherwise the device will
+    If you have a CUDA capable GPU available, device will be "cuda", otherwise the device will
     be "cpu".
 
     !!! Note
