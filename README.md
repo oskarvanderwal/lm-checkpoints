@@ -63,7 +63,7 @@ Collections of checkpoints can be filtered, sliced, combined and split:
 ckpts = PythiaCheckpoints(size="70m")
 early = ckpts.filter(step=[0, 1, 2, 4], seed=[0, 1])
 first_ten = ckpts[:10]
-final = ckpts.final()          # the last checkpoint of each seed
+final = ckpts.final()  # the last checkpoint of each seed
 print(ckpts.steps, ckpts.seeds)
 ```
 
@@ -105,34 +105,24 @@ for ckpt in PythiaCheckpoints(size="14m", clean_cache=True):
     # Do something with ckpt.model or ckpt.tokenizer
     ...
 ```
-### Evaluating checkpoints using lm-evaluation-harness
-If you install lm-checkpoints with the `eval` option (`pip install "lm-checkpoints[eval]"`), you can use the `evaluate` function to run [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness) for all checkpoints:
+### Evaluating checkpoints with lm-evaluation-harness
+lm-checkpoints does not wrap any evaluation framework, but since each checkpoint is just a repo (or path) and a revision, it is easy to combine with e.g. [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness):
 ```python
-from lm_checkpoints import evaluate, PythiaCheckpoints
+import lm_eval
+from lm_checkpoints import PythiaCheckpoints
 
-ckpts = PythiaCheckpoints(size="14m", step=[0, 1, 2, 4], seed=[0], device="cuda")
-
-evaluate(
-    ckpts,
-    tasks=["triviaqa", "crows_pairs_english"],
-    output_dir="test_results",
-    log_samples=True,
-    skip_if_exists=True,
-#    limit=5, # For testing purposes!
-)
+for ckpt in PythiaCheckpoints(size="14m", seed=[0], step=[0, 1000, 143000]):
+    results = lm_eval.simple_evaluate(
+        model="hf",
+        model_args=f"pretrained={ckpt.repo_id},revision={ckpt.revision}",
+        tasks=["lambada_openai"],
+    )
 ```
-
-Or you can use the `evaluate_checkpoints` script:
-```bash
-evaluate_checkpoints pythia --output test_results --size 14m --seed 1 --step 0 1 2 --tasks blimp crows_pairs_english --device cuda --skip_if_exists
-evaluate_checkpoints local --path output/my-run --output test_results --tasks blimp --device cuda
-```
-
-Both examples will create a subdirectory structure in `test_results/` for each model and step. This will contain a results json file (e.g., `results_crows_pairs_english,triviaqa.json`, which also records the checkpoint's revision and commit hash under `lm_checkpoints`), and if using the `--log_samples` option, a json file containing the LM responses to the individual test items for each task (e.g., `samples_triviaqa.json`). With `skip_if_exists`, checkpoints that already have results are skipped without being downloaded.
+See [`examples/evaluate_with_lm_eval.py`](examples/evaluate_with_lm_eval.py) for a version that skips checkpoints that were already evaluated (without downloading them) and saves the results together with the checkpoint's metadata.
 
 ## Development
 ```bash
-pip install -e ".[eval]" pytest
+pip install -e . pytest
 pytest                # offline tests
 pytest --run-network  # also tests that download small models from the HF hub
 ```

@@ -9,9 +9,6 @@ packages = [
             {include = "lm_checkpoints"}
 ]
 
-[tool.poetry.scripts]
-evaluate_checkpoints = "lm_checkpoints.evaluator:main"
-
 [tool.black]
 skip-string-normalization = true
 line-length = 120
@@ -25,7 +22,6 @@ python = ">=3.9"
 transformers = ">=4.35.0"
 torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 huggingface-hub = ">=0.20.0"
-lm-eval = {version = ">=0.4.2", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.4.3"
@@ -34,9 +30,6 @@ ruff = ">=0.4.1"
 
 [tool.pytest.ini_options]
 markers = ["network: downloads models from the HF hub (run with --run-network)"]
-
-[tool.poetry.extras]
-eval = ["lm-eval"]
 
 [build-system]
 requires = ["poetry-core"]
