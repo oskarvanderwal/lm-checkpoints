@@ -140,3 +140,31 @@ def test__clean_cache_on_break(monkeypatch):
     next(it)
     it.close()
     assert deleted == ["step0"]
+
+
+def _fake_hf_cache(cache_dir, repo_id, revision, commit_hash, files):
+    """Builds the HF cache layout: blobs/, refs/<revision> and snapshots/<commit_hash>/ symlinking to the blobs."""
+    repo_dir = cache_dir / ("models--" + repo_id.replace("/", "--"))
+    (repo_dir / "refs").mkdir(parents=True)
+    (repo_dir / "refs" / revision).write_text(commit_hash)
+    (repo_dir / "blobs").mkdir()
+    snapshot = repo_dir / "snapshots" / commit_hash
+    snapshot.mkdir(parents=True)
+    for i, name in enumerate(files):
+        blob = repo_dir / "blobs" / f"blob{i}"
+        blob.write_text("{}")
+        (snapshot / name).symlink_to(blob)
+    return repo_dir
+
+
+def test__clean_cache_tokenizer_only(tmp_path):
+    # Only the tokenizer was loaded, so there is no config.json in the cached snapshot
+    commit_hash = "a" * 40
+    repo_dir = _fake_hf_cache(tmp_path, "EleutherAI/pythia-14m", "step1", commit_hash, ["tokenizer.json"])
+    ckpt = PythiaCheckpoints(step=[1], seed=[0], cache_dir=str(tmp_path))[0]
+    assert ckpt.commit_hash == commit_hash and ckpt.is_cached()
+    assert PythiaCheckpoints(step=[2], seed=[0], cache_dir=str(tmp_path))[0].commit_hash is None
+
+    ckpt.delete_from_cache()
+    assert not (repo_dir / "snapshots" / commit_hash).exists()
+    assert ckpt.commit_hash is None

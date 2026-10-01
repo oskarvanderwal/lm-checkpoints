@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Union
 
-from huggingface_hub import list_repo_refs, scan_cache_dir, try_to_load_from_cache
+from huggingface_hub import constants, list_repo_refs, scan_cache_dir
 
 # kwargs of `from_pretrained` that also make sense for loading the tokenizer
 _TOKENIZER_KWARGS = ("cache_dir", "token", "trust_remote_code", "local_files_only")
@@ -80,12 +80,16 @@ class Checkpoint:
         """Commit hash of the cached revision, or None if not (yet) in the local HF cache."""
         if self.is_local:
             return None
-        path = try_to_load_from_cache(
-            self.repo_id, "config.json", revision=self.revision, cache_dir=self.load_kwargs.get("cache_dir")
+        # Resolved from the cache's refs rather than a specific file, as e.g. loading only the tokenizer caches the
+        # revision without config.json. Layout: <cache>/models--org--name/{refs/<revision>,snapshots/<commit_hash>}
+        repo_dir = Path(self.load_kwargs.get("cache_dir") or constants.HF_HUB_CACHE) / (
+            "models--" + self.repo_id.replace("/", "--")
         )
-        if isinstance(path, str):
-            # <cache>/models--org--name/snapshots/<commit_hash>/config.json
-            return Path(path).parent.name
+        revision = self.revision or "main"
+        ref = repo_dir / "refs" / revision
+        commit_hash = ref.read_text().strip() if ref.is_file() else revision
+        if re.fullmatch(r"[0-9a-f]{40}", commit_hash) and (repo_dir / "snapshots" / commit_hash).is_dir():
+            return commit_hash
         return None
 
     def is_cached(self) -> bool:

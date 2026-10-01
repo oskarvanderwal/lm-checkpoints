@@ -1,21 +1,39 @@
 """Evaluate checkpoints with lm-evaluation-harness (`pip install lm-eval`), resuming where you left off.
 
-Writes <output_dir>/<model>/step_<step>/results.json (with the checkpoint's metadata under "lm_checkpoints")
-and, with log_samples=True, samples_<task>.json. Adapt freely: this is a recipe, not part of the library.
+Writes results.json (with the checkpoint's metadata under "lm_checkpoints") and, with log_samples=True,
+samples_<task>.json to a directory per checkpoint; see `output_path`. Adapt freely: this is a recipe, not part of
+the library.
 """
 
 import json
 from pathlib import Path
 
-import lm_eval
+from lm_checkpoints import Checkpoint, Checkpoints, PythiaCheckpoints
 
-from lm_checkpoints import Checkpoints, PythiaCheckpoints
+
+def output_path(output_dir, ckpt: Checkpoint) -> Path:
+    """A unique directory per checkpoint:
+    - hub: <output_dir>/<org>/<model>[/seed_<seed>]/<revision>
+    - local: <output_dir>/local/<absolute path of the checkpoint directory>[/seed_<seed>]
+    """
+    if ckpt.is_local:
+        path = Path(ckpt.repo_id).resolve()
+        out = Path(output_dir) / "local" / path.relative_to(path.anchor)
+    else:
+        out = Path(output_dir) / ckpt.repo_id
+    if ckpt.seed is not None:
+        out = out / f"seed_{ckpt.seed}"
+    if not ckpt.is_local:
+        out = out / (ckpt.revision or "main")
+    return out
 
 
 def evaluate(checkpoints: Checkpoints, tasks, output_dir, log_samples=False, model_args="", **kwargs):
     """`model_args` are appended to lm-eval's model_args (e.g. "dtype=float16"), `kwargs` go to simple_evaluate."""
+    import lm_eval
+
     for ckpt in checkpoints:
-        out = Path(output_dir) / ckpt.name / f"step_{ckpt.step}"
+        out = output_path(output_dir, ckpt)
         if (out / "results.json").exists():
             continue  # already done: skipped without downloading the checkpoint
 
